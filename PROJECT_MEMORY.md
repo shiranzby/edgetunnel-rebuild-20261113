@@ -1,22 +1,32 @@
 # 当前交付入口
 
-本仓库为隔离重建版本；原 `shiranzby/edgetunnel` 保留。正式域名已在移动 IPv4 业务通过后迁移，当前根域名的 9 条路由均指向下述入口。
+## ShyVPN EdgeTunnel 重建（2026-11-14）
 
-- 外部入口：`shy-runtime-observer-20261113`，源码 `gateway-worker.js`。
-- 内部业务：`shy-edge-20261113`，源码 `worker.js`，仅经 Service Binding 使用。
-- `BACKEND` 指向内部业务；正式域名绑定外部入口。直接绑定内部脚本曾复现 1101，服务绑定结构已通过移动 IPv4；未将平台内部原因视为已确定。
-- 移动兼容入口 `cf-sub.shw.de5.net`，节点 Host/SNI 都使用此域名，不占用香港 Tunnel。
-- 默认直出订阅与 `compat=1` 公共兼容订阅明确区分；两者均不配置个人 VPS。公共回退来自上游，不能称为纯 Cloudflare 出站。
-- 数据来自三类公开/归档结果，Actions 仅同步，不从海外测速。完整记录与订阅候选分开，保留失败和未发布项。
-- 读取在线源设置超时、后台刷新和内置快照；快照标注实际日期，不冒充在线新数据。
-- 认证只从 Cloudflare Secret/本机私有文件取得，不入仓库、截图或日志。
+这是当前权威状态。原始仓库 `shiranzby/edgetunnel` 保留；重建仓库为 `F:/WorkSpace/Myproject/edgetunnel-rebuild-20261113/repo`。
 
-实网证据保存在设备管理工作区 `shyvpn-review-20261113/`，包括 `final-live-subscription-mobile.json`、`public-compatibility-final.json`、`automatic-data-refresh-verification.json`。测试固定本机物理接口与 IPv4 源地址，不修改日用 Sparkle 或系统网络。
+- 正式分发域名只有 `shw.us.ci`。
+- 首页保留 cmliu EdgeTunnel 原版页面；右上角在“我是高手！我就要折腾！”右侧增加“节点排名”。
+- 游客可查看普通页面和完整公开排名；获取节点链接、详细配置、操作日志三个区域要求管理员账号和密码。
+- 订阅无需登录 Cloudflare。订阅和节点由 Cloudflare 直出，不经过个人香港 VPS、Google Oregon VPS、Cloudflare Tunnel 或 SOCKS5。
+- 新节点的 WebSocket Host 和 TLS SNI 均为 `shw.us.ci`。`shyvpn.cc.cd`、`cf-sub.shw.de5.net` 等旧入口不得再写入新的订阅或节点配置；若保留，只做兼容跳转。
+- 公开数据只同步微测网移动/电信/联通、cfhub 全部公开池及归档快照已经测试过的结果；GitHub Actions 不重新连接候选 IP，不依赖天翼云电脑。
+- 页面、认证、管理员、订阅、节点和会话按路径拆分为多个 Worker；同一正式域名承载路由，不使用个人服务器做转发出口。
 
-正式域名迁移后，已从移动 IPv4 经新公共兼容节点取得 `shyvpn.cc.cd` 的有效旧令牌订阅；不使用跨域 SNI/Host 的 403 作为路由失败依据。代理组必须从 `🚀 节点选择` 引用全部非空运营商、地区和地址族子组，不能只生成可见列表却让选择不参与实际路由。已增加对应回归检查。
+## 当前证据
 
-最终验收使用 Sparkle 实际附带的 `E:/工具/Sparkle/resources/sidecar/mihomo.exe`，版本 1.19.33，并在报告中记录实际版本。移动 IPv4 的首选 104.18.39.37 延迟检测 2730 ms，example.com、87,533 字节 cdnjs 文件和 Google 全部 200，旧令牌正式域名订阅也为 200。域名正常解析的两个 IPv4 地址均已直连下载有效订阅；不只验证手工指定的优选地址。
+- 本机中国移动物理 IPv4：接口 10，源地址 `192.168.6.153`。
+- `shw.us.ci` 正常 DNS 的两个 IPv4 均可直接取得订阅；订阅 HTTP 200，Clash/Mihomo YAML 有 205 个节点、15 个代理组，Host/SNI 均为 `shw.us.ci`。
+- `/session` 返回 `{"authenticated":false}`；首页、管理页、排名页、排名 JSON 和按需 CFST 脚本均为 HTTP 200。
+- Sparkle 附带 Mihomo Meta 1.19.33 已用当前订阅完成真实移动 IPv4 业务：Cloudflare 入口延迟检测、网页、下载、再次网页均通过；测试没有使用系统代理、香港 VPS 或 Oregon VPS。
+- 订阅 HTTP 200、TCP/TLS/WS 成功和 Mihomo 实际代理业务必须分别记录，不能用前两项代替最后一项。
 
-最终部署后已触发公开源更新，线上数据与 GitHub 生成时间一致，非内置快照；该次为 235 条完整记录、198 个候选、16 个代理组，数量随后随公开源变化。51 个本轮过期诊断 Worker 及其 16 条临时路由、16 条 DNS 已清理，正式两个 Worker、Pages、用户原有资源保留。
+证据目录：`F:/WorkSpace/设备管理/shyvpn-review-20261113/`。当前关键收据为 `shw-us-ci-session-mobile-20261114.json`、`shw-us-ci-dns-subscription-mobile-20261114.json` 和 `shw-us-ci-mobile-business-final-20261114.json`。其中订阅令牌、UUID、管理员密码和 API 凭据不得复制到仓库或回复。
 
-私有一键导入页与离线备用 YAML 均在设备管理证据目录，禁止提交 Git 或公开上传。离线 YAML 只用于首次导入救援，正常使用应添加远程订阅。保留偶发延迟超时、Google TLS 中断等失败证据，不宣称全池或全部网站永久正常。工作区 `CONTINUOUS_DELIVERY.md` 和同目录 `RESULT.md` 为交付入口。
+## 后续维护
+
+1. 先读本文件、`SOUL.md` 和工作区 `F:/WorkSpace/设备管理/CONTINUOUS_DELIVERY.md`。
+2. 用户反馈超时后重新打开真实移动 IPv4 验收，不以海外 Actions 或公开源结果替代。
+3. 不重新创建大量诊断 Worker；复用现有正式资源并清理临时资源。
+4. 默认订阅保持 Cloudflare 直出；任何公共兼容回退都必须单独标记，不能悄悄经过个人 VPS。
+5. 数据源失败时保留最后成功快照和原始时间，订阅快速返回，不把快照冒充实时测速。
+6. 代码修改后运行 `npm test`、`npm run check`、`npm run build:pages`，并用物理移动 IPv4复核订阅和实际业务。

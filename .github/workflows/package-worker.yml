@@ -7,7 +7,10 @@ on:
       - 'worker.js'
       - 'gateway-worker.js'
       - 'node-worker.js'
-      - 'panel-worker.js'
+      - '*-worker.js'
+      - 'page*.js'
+      - 'panel-*.js'
+      - 'scripts/vendor-panel.mjs'
       - 'page.js'
       - 'upstream/**'
       - 'data/snapshot.js'
@@ -29,7 +32,7 @@ jobs:
       - name: Package worker file
         run: |
           rm -f worker.zip
-          zip -9 worker.zip worker.js gateway-worker.js node-worker.js panel-worker.js page.js wrangler.toml wrangler.gateway.toml data/snapshot.js upstream/cmliu-worker.js upstream/zitianya9110-worker.js README.md LICENSE
+          zip -9 worker.zip worker.js subscription-worker.js gateway-worker.js node-worker.js panel-worker.js panel-auth.js panel-view.js panel-view-no-script1.js panel-cfst-worker.js page.js page-bootstrap2.js admin-worker.js login-worker.js session-worker.js public-worker.js wrangler.toml wrangler.gateway.toml data/snapshot.js upstream/cmliu-worker.js upstream/zitianya9110-worker.js upstream/panel.html upstream/panel-template.js upstream/panel-template-no-script1.js scripts/vendor-panel.mjs README.md LICENSE
 
       - name: Commit packaged worker
         uses: stefanzweifel/git-auto-commit-action@v5

@@ -1,86 +1,81 @@
 # EdgeTunnel Rebuild
 
-这是 ShyVPN 的隔离重建仓库。保留 [cmliu/edgetunnel](https://github.com/cmliu/edgetunnel) 的实际管理面板和当前协议核心，归档 [zitianya9110/cmliu-edgetunnel](https://github.com/zitianya9110/cmliu-edgetunnel) 供旧版协议、订阅和部署方式对照；新增完整公开排名与本地生成的订阅。
+这是 ShyVPN 的隔离重建仓库。主体来自 [cmliu/edgetunnel](https://github.com/cmliu/edgetunnel)，同时保留 [zitianya9110/cmliu-edgetunnel](https://github.com/zitianya9110/cmliu-edgetunnel) 作为旧版协议与部署方式的对照。项目提供原版 EdgeTunnel 管理页面、公开节点排名和 Cloudflare 优选订阅。
 
-默认订阅使用 Cloudflare 直出，不配置个人香港/Oregon VPS、Cloudflare Tunnel 或 SOCKS5。另提供明确分开的“公共兼容”订阅，只在直连失败时使用上游公共回退；这同样不使用个人两台 VPS，但不能称为全程仅 Cloudflare。
+正式分发域名只有 `shw.us.ci`。默认订阅和节点均由 Cloudflare 直出，不经过个人香港 VPS、Google Oregon VPS、Cloudflare Tunnel 或 SOCKS5。订阅链接直接返回配置，不要求订阅者登录 Cloudflare；管理员账号密码只用于保护面板中的私有配置、节点链接、详细配置和操作日志。
 
-正式管理与排名入口由域名迁移后的 `shyvpn.cc.cd` 提供；中国移动 IPv4 的兼容入口为 `https://cf-sub.shw.de5.net/`。订阅用户使用带令牌的链接直接下载，不登录 Cloudflare。管理员登录只保护管理面板。
+`shyvpn.cc.cd`、`cf-sub.shw.de5.net` 等旧入口不再作为正式分发域名。若保留旧 DNS 或旧路由，只用于兼容跳转到 `shw.us.ci`，不写入新的节点 Host、TLS SNI 或订阅地址。这样可以把正式使用收敛到一个域名，最多只保留旧域名作为过渡别名。
 
 ## 当前结构
 
-- `gateway-worker.js`：外部 HTTP/WebSocket 入口，通过 Service Binding 转交内部业务 Worker。
-- `worker.js`：内部业务入口，组合面板、排名、协议和订阅；不直接绑定生产域名。
-- `node-worker.js`：默认强制空反代地址、无代理类型、关闭反代回退。`/compat` 仅在显式启用后调用独立的上游公共兼容入口；不解析用户提供的外部代理地址。
-- `panel-worker.js`：调用真实原版登录、管理页面及 KV API，将管理页订阅令牌连接到本项目的订阅生成器。
-- `page.js`：两个栏目共用的页面。Worker 和 Pages 由同一份页面生成。
-- `upstream/`：两个上游源码；cmliu 快照版本 `2026-11-10 23:26:46`，末尾追加本地调用适配，保留主体。
-- `data/cfip.json`：由公开数据源和已保存快照合并得到的候选数据。
-- `scripts/`：只同步公开数据，不从这台电脑或香港 VPS 重新测速。
-- `local-cfst-dashboard/`：历史工具，运行本项目不需要启动它。
+- `page-bootstrap2.js`：正式首页入口，保留原版 EdgeTunnel 页面布局，并在右上角增加“节点排名”。
+- `panel-view-no-script1.js`、`upstream/panel-template-no-script1.js`：原版面板模板；CFST 增强脚本按需从 `/__shy_panel_cfst.js` 加载，避免首页一次性执行过多内嵌脚本。
+- `panel-worker.js`：公开页面、安全配置投影和管理页面；游客可以查看普通内容，三个私有区域在登录后解锁。
+- `panel-auth.js`：管理员账号、密码登录和签名会话；订阅令牌、UUID、Cloudflare 密钥和旧上游 Cookie 不授予面板管理权限。
+- `session-worker.js`、`login-worker.js`、`admin-worker.js`、`public-worker.js`：将登录、会话、管理员接口和公开接口分开部署。
+- `subscription-worker.js`：读取公开合并快照，生成 Clash/Mihomo、V2Ray 和 Sing-box 订阅以及排名数据。
+- `node-worker.js`：只处理 VLESS over WebSocket 节点连接；节点入口是 Cloudflare 优选 IP，WebSocket Host 和 TLS SNI 都使用 `shw.us.ci`。
+- `gateway-worker.js`、`worker.js`：保留单 Worker 部署和旧链接兼容逻辑，正式拆分部署使用独立入口和 Service Binding。
+- `upstream/`：上游源码和本地模板归档；更新面板模板后运行 `node scripts/vendor-panel.mjs`。
+- `data/cfip.json`、`data/snapshot.js`：公开优选结果与内置快照；数据只同步公开来源已经测试过的结果，不从 GitHub Actions 海外机器重新测速。
 
-## 首页
+正式线上拆分为页面、认证、管理员、订阅、节点和会话几个 Worker。它们共同使用 `shw.us.ci` 的路径路由；订阅和节点路由不会经过香港或 Oregon 服务器。
 
-Worker 首页有两个栏目：
+## 首页和权限
 
-1. `原版面板`：嵌入真实 EdgeTunnel 登录和管理页面，提供独立打开入口。
-2. `节点排名`：完整来源记录，包括未发布和历史失败项；支持运营商、地区、IPv4/IPv6、发布状态、搜索、排序和分页。地区为来源标注的入口信息，不保证最终出口地区。
+首页直接使用原版 EdgeTunnel 设置页面，不套额外的外层 iframe 或管理面板。右上角保留原版“我是高手！我就要折腾！”入口，并在其右侧增加“节点排名”。排名页 `/best` 对游客开放，显示完整来源记录、运营商、地区、IPv4/IPv6、发布状态、搜索、排序和分页。
 
-保留微测网移动、电信、联通全部行，cfhub 全部池与 IPv4/IPv6，以及已归档的 `test.shyvpn.cc.cd` 快照。来源检测方式、原始指标和更新时间分别保存，不将 cfhub 的 ECH/TLS 检测冒充下载测速。
+游客可以查看当前网络信息、公开排名、普通说明和公开数据。以下三个区域要求管理员账号和密码后才显示完整内容：
+
+- 获取节点链接；
+- 详细配置信息；
+- 查看操作日志。
+
+未登录时这些区域只显示登录入口，不把 UUID、订阅令牌、节点链接或后台配置写进 HTML。登录后由签名会话访问 `/admin/config.json`、`/admin/log.json` 等私有接口；写操作仍要求同源请求和管理员会话。
 
 ## 订阅
 
-部署后通过 `SUB_TOKEN` 或 `KEY` 保护订阅：
+正式订阅地址使用 `shw.us.ci`：
 
 - `/sub?token=...&clash`：Clash/Mihomo YAML；
 - `/sub?token=...&v2ray`：Base64 VLESS；
 - `/singbox?token=...`：Sing-box JSON；
-- 在上述订阅地址增加 `&compat=1`：公共兼容模式，节点名含“公共兼容”、WebSocket 路径为 `/compat`；
-- `/rankings.json`：公开排名数据。
+- `/best`：公开节点排名页面；
+- `/rankings.json`：公开排名数据；
+- `/cfip.json`：公开合并数据。
 
-节点固定使用独立 CF 域名 `cf-sub.shw.de5.net` 作为 Host 和 SNI，Cloudflare 优选 IP 作为 TCP 入口。订阅提供运营商、地区和地址族代理组，保留同一 IP 的不同运营商记录，不截断为 200 个或 240 个。
+节点连接方式为 VLESS over WebSocket。每个节点使用 Cloudflare 优选 IP 作为 TCP 入口，`Host` 和 `TLS servername` 均为 `shw.us.ci`，因此节点不会把流量转发到个人 VPS。订阅提供运营商、地区和地址族代理组，并由 `🚀 节点选择` 主组实际引用这些子组。
 
-在 `🚀 节点选择` 中选择运营商、地区或地址族组，再在对应组内切换节点，选择才会用于实际流量。
+默认订阅是 Cloudflare 直出。若部署时明确启用 `ENABLE_PUBLIC_FALLBACK=true`，增加 `compat=1` 的公共兼容模式；该模式会在直连失败时使用公开兼容回退，名称和路径会单独标记，不能把它当作默认纯 Cloudflare 直出模式。
 
-Clash/Mihomo 代理组指定 `https://www.gstatic.com/generate_204` 进行延迟检测。
+## 数据更新
+
+`.github/workflows/update-cfip.yml` 定时抓取微测网移动、电信、联通结果、cfhub 全部公开池以及已保存的历史公开快照。Actions 只同步来源页面，不连接候选 IP，也不使用天翼云电脑作为测速设备。源暂时不可读时保留最后一次成功快照，并记录原始更新时间；所有来源记录和失败/未发布项仍可在排名页查看。
+
+Worker 对公开 JSON 使用短缓存并保留内置快照。数据提交后不需要重新部署 Worker，最多等待缓存周期即可读取新数据；在线源失败时订阅仍优先使用可追溯的旧快照，避免因上游页面暂时异常导致订阅超时。
 
 ## 部署变量
 
 必须设置：
 
-- `ADMIN`：原版面板管理员密码；
+- `ADMIN`：管理员密码；
+- `ADMIN_USER`：管理员账号，默认值为 `admin`；
 - `UUID`：VLESS UUID；
 - `KEY` 或 `SUB_TOKEN`：订阅访问密钥。
 
-业务 Worker 可选：
+常用变量：
 
-- `CFIP_DATA_URL`：优选数据 JSON 地址；
-- `HOST`：节点 HTTP Host；
-- `PROXY_HOST`：订阅节点的 WebSocket Host；
-- `PROXY_SNI`：订阅节点的 TLS SNI；
-- `LEGACY_SUB_TOKEN`：兼容旧订阅链接；
-- `ENABLE_PUBLIC_FALLBACK=true`：提供单独的公共兼容选项，默认订阅仍为仅直出；
-- `KV`：本项目独立的上游管理面板配置存储，不复用个人 VPS 配置。
+- `CFIP_DATA_URL`：公开合并数据 JSON 地址；
+- `HOST`：正式节点 Host，生产值为 `shw.us.ci`；
+- `PROXY_HOST`：订阅节点 WebSocket Host，生产值为 `shw.us.ci`；
+- `PROXY_SNI`：订阅节点 TLS SNI，生产值为 `shw.us.ci`；
+- `LEGACY_SUB_TOKEN`：兼容旧订阅令牌；
+- `ENABLE_PUBLIC_FALLBACK=true`：显式开启公共兼容订阅；
+- `KV`：管理面板配置存储。
 
-外部入口必须设置 Service Binding `BACKEND` 指向内部业务 Worker。线上经过验证的结构为：
+凭据通过 Cloudflare Secret 或本机私密部署文件设置，不写入 Git、网页、截图或日志。正式域名只绑定公开入口；拆分部署时由路径路由把页面、订阅和节点转给对应 Worker。
 
-```text
-客户端 → Cloudflare 优选 IP → 入口 Worker
-                              └─ Service Binding → 业务 Worker → 目标网站
-```
-
-`wrangler.gateway.toml` 对应入口，`wrangler.toml` 对应内部业务。UUID、管理员密码、订阅令牌通过 Cloudflare Secret 设置，不写入仓库。只有入口绑定域名；不要将业务 Worker 直接公开替代这条已经验收的链路。
-
-## 自动更新
-
-`.github/workflows/update-cfip.yml` 每小时第 17 分钟抓取公开结果并提交 `data/`。只抓取结果页，不连接候选 IP，不从 GitHub Actions 测速，也不依赖天翼云电脑。
-
-业务 Worker 读取 GitHub raw JSON，缓存约 120 秒；数据提交后无需重发 Worker。冷启动最多等待约 800 ms 的在线数据，之后先返回内置快照，后台继续刷新；在线读取失败不会卡住订阅更新，页面标注快照状态和原始时间。`data/snapshot.js` 是同步导出的公开快照，不含凭据。
-
-某来源失败时，Actions 保留其最后成功快照并标注原始抓取时间。历史测速快照是归档，不能称为实时测速。
-
-`npm run build:pages` 从同一页面生成 `pages/`。Pages 在浏览器中刷新 Worker 排名 API；刷新失败时明确显示构建时快照。代码更新需要重新部署，数据更新与代码部署分别处理。
-
-## 验证和能力边界
+## 本地检查
 
 ```text
 npm test
@@ -88,14 +83,14 @@ npm run check
 npm run build:pages
 ```
 
-线上验收绑定中国移动物理 IPv4 接口，使用临时 Mihomo、独立端口和无协议字节的本机中继，仅负责将连接固定到物理接口。测试不改日用 Sparkle、系统代理或 DNS。
+真实线上验收必须使用本机中国移动物理 IPv4 接口 10、源地址 `192.168.6.153`，并区分以下三个层级：
 
-Cloudflare TCP sockets 限制访问 Cloudflare 自身 IP 等目标；仅直出模式存在这类目标的兼容限制。公共兼容模式保留直连优先，在失败时使用上游公共地址。
+1. 订阅 HTTP 200，确认客户端拿到有效配置；
+2. Cloudflare TCP/TLS/WS 握手成功，确认节点入口可连接；
+3. Sparkle 附带的 Mihomo 实际代理业务成功，依次访问网页、下载内容和再次访问网页。
 
-移动 IPv4 实测：直出模式两个订阅节点完成 Google 网页、13 KB 图片、第二次网页；公共兼容模式完成 example.com、cdnjs 87,533 字节资源、Google 网页。另一次 `speed.cloudflare.com` 探测超时，保留失败记录，不能承诺所有网站或所有候选永久可用。电信、联通和 IPv6 未由本机实际验收。
-
-官方依据：<https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/>
+其中前两项不能替代第三项。当前验收使用 Mihomo Meta 1.19.33，真实移动物理 IPv4 下两个 Cloudflare 入口均已完成订阅、延迟和网页/下载/再次网页检查；这代表当前样本通过，不代表所有候选 IP、所有运营商或所有网站永久可用。
 
 ## 来源与许可
 
-保留上游 GPL 许可、完整协议源码及来源。本地适配没有将个人 API、UUID、订阅令牌或服务器凭据写入源码。
+保留上游 GPL 许可、完整协议源码及来源。本地适配没有把个人 API、UUID、订阅令牌或服务器凭据写入源码。

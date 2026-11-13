@@ -42,9 +42,10 @@ const ctx = { waitUntil() {} };
 const home = await workerDefault.fetch(new Request('https://edgetunnel-rebuild-20261113.example.workers.dev/'), env, ctx);
 assert.equal(home.status, 200);
 const homeBody = await home.text();
-assert.match(homeBody, /原版面板/);
+assert.match(homeBody, /id="modeToggleBtn"/);
 assert.match(homeBody, /节点排名/);
-assert.match(homeBody, /运营商/);
+assert.match(homeBody, /class="shy-guest"/);
+assert.doesNotMatch(homeBody, /id="panel"/);
 
 const ranking = await workerDefault.fetch(new Request('https://edgetunnel-rebuild-20261113.example.workers.dev/rankings.json'), env, ctx);
 assert.equal(ranking.status, 200);

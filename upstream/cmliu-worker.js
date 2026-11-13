@@ -33159,6 +33159,7 @@ Chapter 36
 
 // Local adapter: call the upstream protocol engine with an explicit direct-only context.
 export { 处理WS请求 as upstreamWebSocket };
+export { MD5MD5 as upstreamPanelCookieHash };
 // Optional upstream public compatibility path, isolated from all personal/VPS settings.
 export function upstreamPublicWebSocket(request, uuid) {
 	const url = new URL(request.url);

@@ -7,7 +7,7 @@ export function renderPage(data, origin, panelOrigin = origin) {
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ShyVPN · EdgeTunnel</title><style>
+<title>节点排名 · ShyVPN</title><style>
 :root{color-scheme:light dark;--bg:#fff;--fg:#191919;--muted:#626262;--line:#dedede;--soft:#f5f5f5}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:16px 28px;border-bottom:1px solid var(--line)}
@@ -28,15 +28,8 @@ details{border-bottom:1px solid var(--line);padding:12px 0}summary{min-height:44
 @media(prefers-color-scheme:dark){:root{--bg:#191919;--fg:#ededed;--muted:#b3b3b3;--line:#414141;--soft:#252525}}
 @media(max-width:640px){header{padding:14px 16px}main{padding:16px}nav{width:100%}nav button{flex:1}.toolbar label:first-child{width:100%}#q,#subkey{width:100%}.toolbar label{flex:1;min-width:125px}iframe{min-height:650px}.actions{width:100%}.intro{gap:8px}}
 </style></head><body>
-<header><div><h1>ShyVPN <small>EdgeTunnel</small></h1><small>公开优选数据 · Cloudflare 直出</small></div>
-<nav role="tablist" aria-label="首页栏目"><button id="tab-original" role="tab" aria-selected="true" aria-controls="original" data-tab="original">原版面板</button><button id="tab-ranking" role="tab" aria-selected="false" aria-controls="ranking" data-tab="ranking">节点排名</button></nav></header>
-<main><section id="original" role="tabpanel" aria-labelledby="tab-original">
-<div class="intro"><div><h2>EdgeTunnel 原版管理面板</h2><p class="muted">管理员在下方登录；订阅链接可直接分享，使用订阅无需登录 Cloudflare。</p></div><a class="button" id="open-panel" target="_blank" rel="noopener">独立打开面板</a></div>
-<details><summary>生成一键订阅链接</summary><p class="note">输入管理员提供的订阅密钥。密钥仅用于生成此页面上的订阅链接，不保存在浏览器。</p><div class="toolbar"><label>订阅密钥<input id="subkey" type="password" autocomplete="off"></label><button id="make-links">生成链接</button></div>
-<div id="sub-links" class="actions" hidden></div><p id="feedback" role="status"></p></details>
-<iframe id="panel" title="EdgeTunnel 原版管理面板" referrerpolicy="same-origin"></iframe>
-</section>
-<section id="ranking" role="tabpanel" aria-labelledby="tab-ranking" hidden>
+<header><div><h1>节点排名</h1><small>微测网三网 · cfhub 全池 · 历史快照</small></div><nav><a class="button" href="${panelOrigin}">返回面板</a></nav></header>
+<main><section id="ranking">
 <div class="intro"><div><h2>完整优选结果</h2><p id="counts"></p><p class="muted" id="updated"></p></div><div class="actions"><a class="button" id="raw-data">下载完整 JSON</a></div></div>
 <p class="note">合并微测网三网、cfhub 全部分类及已保存的测速快照。保留未发布和历史失败记录；不同来源的延迟、速度和检测方式不可直接等同。地区为来源标注的入口信息，不保证出口地区。</p>
 <div id="sources" class="sources"></div>
@@ -53,10 +46,7 @@ details{border-bottom:1px solid var(--line);padding:12px 0}summary{min-height:44
 const initial=${initial};
 const $=id=>document.getElementById(id),rows=initial.rows;let page=0;
 const base=initial.origin.replace(/\\/$/,'');
-$('panel').src=initial.panelOrigin+'/login';$('open-panel').href=initial.panelOrigin+'/admin';$('raw-data').href=base+'/cfip.json';
-function show(name){document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===name)));['original','ranking'].forEach(id=>$(id).hidden=id!==name);history.replaceState(null,'','#'+name)}
-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));
-if(location.hash==='#ranking'||location.pathname==='/best')show('ranking');
+$('raw-data').href=base+'/cfip.json';
 $('counts').textContent=rows.length+' 条完整来源记录 · '+initial.candidateCount+' 个订阅候选';
 $('updated').textContent='合并时间：'+(initial.generatedAt||'未提供')+(initial.runtimeSnapshot?' · 内置 / 上次成功快照，后台刷新中':' · 不依赖天翼云电脑');
 for(const source of initial.sources){const span=document.createElement('span');span.textContent=source.name+'：'+source.count+' 条 · '+(source.localOnly?'历史快照':source.cached?'沿用上次成功数据':'公开源已同步')+' · '+(source.fetchedAt||'未提供');$('sources').append(span)}
@@ -72,11 +62,6 @@ if(!found.length){const tr=document.createElement('tr'),td=document.createElemen
 $('shown').textContent='共 '+found.length+' 条 · 第 '+(page+1)+' / '+Math.max(1,Math.ceil(found.length/size))+' 页';$('prev').disabled=page===0;$('next').disabled=(page+1)*size>=found.length}
 for(const id of ['q','carrier','region','family','status','sort','size'])$(id).addEventListener(id==='q'?'input':'change',()=>{page=0;render()});
 $('prev').onclick=()=>{page--;render()};$('next').onclick=()=>{page++;render()};render();
-$('make-links').onclick=()=>{const key=$('subkey').value.trim(),out=$('sub-links');out.replaceChildren();if(!key){$('feedback').textContent='请输入订阅密钥。';return}const clash=base+'/sub?token='+encodeURIComponent(key)+'&clash',v2ray=base+'/sub?token='+encodeURIComponent(key)+'&v2ray';
-for(const [name,href] of [['导入 Sparkle / Clash','clash://install-config?url='+encodeURIComponent(clash)+'&name=ShyVPN'],['下载 Clash 配置',clash],['下载 VLESS 订阅',v2ray]]){const a=document.createElement('a');a.className='button';a.textContent=name;a.href=href;out.append(a)}
-const copyV2=document.createElement('button');copyV2.textContent='复制 v2rayN 订阅链接';copyV2.onclick=async()=>{try{await navigator.clipboard.writeText(v2ray);$('feedback').textContent='已复制，可在 v2rayN 中添加订阅。'}catch{$('feedback').textContent='请打开 VLESS 订阅后复制地址。'}};out.append(copyV2);
-if(initial.publicFallback){const compatible=clash+'&compat=1';for(const [name,href] of [['导入兼容订阅（公共回退）','clash://install-config?url='+encodeURIComponent(compatible)+'&name=ShyVPN-Compat'],['下载兼容配置（公共回退）',compatible]]){const a=document.createElement('a');a.className='button';a.textContent=name;a.href=href;out.append(a)}const note=document.createElement('p');note.className='note';note.textContent='兼容订阅在 CF 直出失败时使用上游公共回退；不经过你的个人 VPS。上面的默认链接保持仅直出。';out.append(note)}
-const copy=document.createElement('button');copy.textContent='复制 Clash 订阅链接';copy.onclick=async()=>{try{await navigator.clipboard.writeText(clash);$('feedback').textContent='已复制订阅链接。'}catch{$('feedback').textContent='无法访问剪贴板，请打开下载链接后复制地址。'}};out.append(copy);out.hidden=false;$('feedback').textContent='已生成。订阅可直接下载，客户端无需登录 Cloudflare。'};
 if(location.origin!==base){fetch(base+'/rankings.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error();return r.json()}).then(fresh=>{rows.splice(0,rows.length,...fresh.rows);initial.publicFallback=fresh.publicFallback===true;$('counts').textContent=rows.length+' 条完整来源记录 · '+fresh.clientNodes.length+' 个订阅候选';$('updated').textContent='合并时间：'+fresh.generatedAt+(fresh.runtimeSnapshot?' · 内置 / 上次成功快照，后台刷新中':' · 已从 Worker 更新');$('sources').replaceChildren();for(const source of fresh.sources||[]){const span=document.createElement('span');span.textContent=source.name+'：'+source.count+' 条 · '+(source.cached?'沿用快照':'已同步')+' · '+source.fetchedAt;$('sources').append(span)}render()}).catch(()=>{$('updated').textContent+=' · 在线刷新暂不可用，显示构建时快照'})}
 </script></body></html>`;
 }

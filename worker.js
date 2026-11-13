@@ -99,7 +99,7 @@ function rebuildEndpoint(node, index, env, requestHost) {
   const name = `${rebuildFlag(region)} ${carrier} | ${region} | ${colo} | ${String(index + 1).padStart(3, '0')}`;
   const host = rebuildSafe(env.PROXY_HOST || env.HOST || requestHost);
   const sni = rebuildSafe(env.PROXY_SNI || host);
-  return { rawIP, displayIP, port: Number(node.port || 443), region, carrier, colo, name: env.NODE_PATH === '/compat' ? `${name} | 公共兼容` : name, host, sni, path: env.NODE_PATH || '/', speed: rebuildSpeed(node), source: rebuildSafe(node.sourceName || node.source || '') };
+  return { rawIP, displayIP, port: Number(node.port || 443), region, carrier, colo, name: env.NODE_PATH === '/compat' ? `${name} | 公共兼容` : name, host, sni, path: env.NODE_PATH || '/ws', speed: rebuildSpeed(node), source: rebuildSafe(node.sourceName || node.source || '') };
 }
 
 function rebuildYaml(value) {
@@ -182,7 +182,7 @@ async function handleRebuildRequest(request, env, ctx) {
     return null;
   }
   const requestHost = url.hostname;
-  if (path === '/' || path === '/best') {
+  if (path === '/best') {
     const subscriptionOrigin = env.PROXY_HOST ? `https://${rebuildSafe(env.PROXY_HOST)}` : url.origin;
     return new Response(renderPage({ ...data, rows: rebuildRows(data), candidateCount: rebuildUsable(data).length, publicFallback: env.ENABLE_PUBLIC_FALLBACK === 'true' }, subscriptionOrigin, url.origin), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
   }
@@ -201,9 +201,9 @@ async function handleRebuildRequest(request, env, ctx) {
       if (filtered.length) nodes = filtered;
     }
     const headers = { 'Cache-Control': 'no-store', 'Profile-Update-Interval': '1', 'Profile-Web-Page-Url': url.origin, 'Content-Disposition': "inline; filename=ShyVPN" };
-    if (path === '/singbox' || url.searchParams.has('singbox')) return new Response(rebuildSingbox(nodes, env, requestHost), { headers: { ...headers, 'Content-Type': 'application/json; charset=utf-8' } });
+    if (path === '/singbox' || url.searchParams.has('singbox') || url.searchParams.has('sb')) return new Response(rebuildSingbox(nodes, env, requestHost), { headers: { ...headers, 'Content-Type': 'application/json; charset=utf-8' } });
     const ua = request.headers.get('User-Agent') || '';
-    if (path === '/v2ray' || url.searchParams.has('v2ray') || (path === '/sub' && /v2rayn|v2rayng/i.test(ua) && !url.searchParams.has('clash'))) return new Response(btoa(unescape(encodeURIComponent(rebuildVlessLinks(nodes, env, requestHost)))), { headers: { ...headers, 'Content-Type': 'text/plain; charset=utf-8' } });
+    if (path === '/v2ray' || url.searchParams.has('v2ray') || url.searchParams.has('b64') || (path === '/sub' && /v2rayn|v2rayng/i.test(ua) && !url.searchParams.has('clash'))) return new Response(btoa(unescape(encodeURIComponent(rebuildVlessLinks(nodes, env, requestHost)))), { headers: { ...headers, 'Content-Type': 'text/plain; charset=utf-8' } });
     return new Response(rebuildClash(nodes, env, requestHost, data), { headers: { ...headers, 'Content-Type': 'application/yaml; charset=utf-8' } });
   }
   return null;
@@ -213,11 +213,25 @@ async function handleRebuildRequest(request, env, ctx) {
 export default {
   async fetch(request, env, ctx) {
     try {
-      if ((request.headers.get('Upgrade') || '').toLowerCase() === 'websocket') {
+      const requestURL = new URL(request.url);
+      const websocketUpgrade = (request.headers.get('Upgrade') || '').toLowerCase() === 'websocket';
+      const websocketKey = request.headers.get('Sec-WebSocket-Key') || '';
+      if (requestURL.hostname === 'shyvpn.cc.cd' &&
+          ['GET', 'HEAD'].includes(request.method) &&
+          ['/', '/admin', '/login', '/best'].includes(requestURL.pathname) &&
+          !(websocketUpgrade && websocketKey)) {
+        requestURL.hostname = 'shw.us.ci';
+        return new Response(null, {
+          status: 302,
+          headers: { Location: requestURL.href, 'Cache-Control': 'no-store' },
+        });
+      }
+      if (websocketUpgrade && websocketKey &&
+          [requestURL.pathname, requestURL.pathname.replace(/\/+$/, '') || '/'].some(path => path === '/ws' || path === '/compat')) {
         return node.fetch(request, env, ctx);
       }
-      const path = new URL(request.url).pathname;
-      if (/^\/(?:login|logout|admin(?:\/.*)?)$/.test(path)) {
+      const path = requestURL.pathname;
+      if (path === '/' || /^\/(?:login|logout|session|public\/config\.json|admin(?:\/.*)?)$/.test(path)) {
         return panel.fetch(request, env, ctx);
       }
       const response = await handleRebuildRequest(request, env, ctx);
