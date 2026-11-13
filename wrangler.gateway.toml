@@ -1,0 +1,8 @@
+name = "shy-runtime-observer-20261113"
+main = "gateway-worker.js"
+compatibility_date = "2026-11-13"
+workers_dev = true
+
+[[services]]
+binding = "BACKEND"
+service = "shy-edge-20261113"

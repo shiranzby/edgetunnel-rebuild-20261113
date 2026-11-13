@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check worker.js",
-    "test": "node --test tests/*.test.mjs"
+    "check": "node --check worker.js && node --check node-worker.js && node --check gateway-worker.js && node --check page.js",
+    "test": "node --test tests/*.test.mjs",
+    "build:pages": "node scripts/build-pages.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.152.0"

@@ -10,12 +10,7 @@ assert.match(source, /PROXY_SNI/);
 assert.match(source, /运营商 \|/);
 assert.match(source, /地区 \| /);
 
-const sanitizedSource = source
-  .replace("import { connect } from 'cloudflare:sockets';", 'const connect = () => { throw new Error("socket unavailable in tests"); };')
-  .replace('export default {', 'const workerDefault = {');
-const modulePath = join(tmpdir(), `edgetunnel-rebuild-worker-${Date.now()}.mjs`);
-await writeFile(modulePath, `${sanitizedSource}\nexport { workerDefault };\n`, 'utf8');
-const { workerDefault } = await import(`file:///${modulePath.replace(/\\/g, '/')}`);
+const { default: workerDefault } = await import('../worker.js');
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (input) => {
@@ -72,6 +67,9 @@ assert.match(clashBody, /运营商 \| 移动/);
 assert.match(clashBody, /地区 \| 日本/);
 assert.match(clashBody, /172\.64\.229\.7/);
 assert.match(clashBody, /2606:4700::1111/);
+assert.match(clashBody, /url: https:\/\/www\.gstatic\.com\/generate_204/);
+assert.match(clashBody, /地址 \| IPv4/);
+assert.doesNotMatch(clashBody, /nps\.shw|35\.212\.223\.31|PROXYIP/);
 
 const v2ray = await workerDefault.fetch(new Request('https://edgetunnel-rebuild-20261113.example.workers.dev/v2ray?token=test-token'), env, ctx);
 assert.equal(v2ray.status, 200);
@@ -82,6 +80,23 @@ assert.match(decoded, /sni=edgetunnel-rebuild-20261113\.example\.workers\.dev/);
 const quick = await workerDefault.fetch(new Request('https://edgetunnel-rebuild-20261113.example.workers.dev/test-key?clash'), env, ctx);
 assert.equal(quick.status, 200);
 assert.match(await quick.text(), /172\.64\.229\.7/);
+
+const legacy = await workerDefault.fetch(new Request('https://example.test/sub?token=old-link&clash'), { ...env, LEGACY_SUB_TOKEN: 'old-link' }, ctx);
+assert.equal(legacy.status, 200);
+assert.equal(legacy.headers.get('location'), null);
+const autoV2 = await workerDefault.fetch(new Request('https://example.test/sub?token=test-token', { headers: { 'User-Agent': 'v2rayN/7' } }), env, ctx);
+assert.match(Buffer.from(await autoV2.text(), 'base64').toString('utf8'), /^vless:\/\//);
+
+const large = Array.from({ length: 350 }, (_, index) => ({
+  ip: `192.0.${Math.floor(index / 250)}.${index % 250 + 1}`, port: 443,
+  lineName: index % 2 ? '电信' : '移动', published: true,
+}));
+globalThis.fetch = async () => Response.json({ generatedAt: 'fixture', clientNodes: large, records: [...large, { ip: '198.51.100.1', published: false }] });
+const largeEnv = { ...env, CFIP_DATA_URL: env.CFIP_DATA_URL + '?large' };
+const complete = await workerDefault.fetch(new Request('https://example.test/sub?token=test-token&clash'), largeEnv, ctx);
+assert.equal((await complete.text()).match(/"type":"vless"/g).length, 350);
+const fullRanking = await workerDefault.fetch(new Request('https://example.test/rankings.json'), largeEnv, ctx);
+assert.equal((await fullRanking.json()).rows.length, 351);
 
 globalThis.fetch = originalFetch;
 console.log('isolated worker tests passed');
