@@ -1,0 +1,8 @@
+name = "edgetunnel-rebuild-20261113"
+main = "worker.js"
+compatibility_date = "2026-11-13"
+workers_dev = true
+keep_vars = false
+
+# Deployment values are supplied through the isolated deploy script.
+# Do not put ADMIN, UUID, KEY, or SUB_TOKEN in Git.

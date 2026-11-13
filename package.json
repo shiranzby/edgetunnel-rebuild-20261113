@@ -1,0 +1,12 @@
+{
+  "name": "edgetunnel-rebuild-20261113",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check worker.js",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.152.0"
+  }
+}
