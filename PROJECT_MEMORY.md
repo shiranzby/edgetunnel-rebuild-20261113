@@ -12,3 +12,5 @@
 - 认证只从 Cloudflare Secret/本机私有文件取得，不入仓库、截图或日志。
 
 实网证据保存在设备管理工作区 `shyvpn-review-20261113/`，包括 `final-live-subscription-mobile.json`、`public-compatibility-final.json`、`automatic-data-refresh-verification.json`。测试固定本机物理接口与 IPv4 源地址，不修改日用 Sparkle 或系统网络。
+
+正式域名迁移后，已从移动 IPv4 经新公共兼容节点取得 `shyvpn.cc.cd` 的有效旧令牌订阅；不使用跨域 SNI/Host 的 403 作为路由失败依据。代理组必须从 `🚀 节点选择` 引用全部非空运营商、地区和地址族子组，不能只生成可见列表却让选择不参与实际路由。已增加对应回归检查。

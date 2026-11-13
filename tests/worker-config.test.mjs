@@ -70,6 +70,10 @@ assert.match(clashBody, /2606:4700::1111/);
 assert.match(clashBody, /url: https:\/\/www\.gstatic\.com\/generate_204/);
 assert.match(clashBody, /地址 \| IPv4/);
 assert.doesNotMatch(clashBody, /nps\.shw|35\.212\.223\.31|PROXYIP/);
+const mainGroup = clashBody.split('\n  - name: "运营商 | 移动"')[0];
+assert.match(mainGroup, /\n      - "地区 \| 日本"/);
+assert.match(mainGroup, /\n      - "地址 \| IPv4"/);
+assert.match(mainGroup, /\n      - "运营商 \| 电信"/);
 
 const v2ray = await workerDefault.fetch(new Request('https://edgetunnel-rebuild-20261113.example.workers.dev/v2ray?token=test-token'), env, ctx);
 assert.equal(v2ray.status, 200);

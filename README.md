@@ -39,6 +39,8 @@ Worker 首页有两个栏目：
 
 节点固定使用独立 CF 域名 `cf-sub.shw.de5.net` 作为 Host 和 SNI，Cloudflare 优选 IP 作为 TCP 入口。订阅提供运营商、地区和地址族代理组，保留同一 IP 的不同运营商记录，不截断为 200 个或 240 个。
 
+在 `🚀 节点选择` 中选择运营商、地区或地址族组，再在对应组内切换节点，选择才会用于实际流量。
+
 Clash/Mihomo 代理组指定 `https://www.gstatic.com/generate_204` 进行延迟检测。
 
 ## 部署变量

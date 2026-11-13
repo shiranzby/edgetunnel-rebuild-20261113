@@ -120,7 +120,10 @@ function rebuildClash(nodes, env, requestHost, data) {
   const all = items.map(item => item.name);
   const preferredIPs = new Set(String(env.PREFERRED_ENTRY_IPS || '104.18.39.37,104.18.32.198').split(',').map(value => value.trim()));
   const preferred = items.filter(item => preferredIPs.has(item.rawIP)).map(item => item.name);
-  const mainChoices = [...new Set([...preferred, '运营商 | 移动', '运营商 | 电信', '运营商 | 联通', ...all])];
+  const carrierChoices = ['移动', '电信', '联通', '多线', '其他'].filter(name => byCarrier.has(name)).map(name => `运营商 | ${name}`);
+  const regionChoices = [...byRegion.keys()].map(name => `地区 | ${name}`);
+  const addressChoices = [4, 6].filter(family => items.some(item => item.rawIP.includes(':') === (family === 6))).map(family => `地址 | IPv${family}`);
+  const mainChoices = [...new Set([...preferred, ...carrierChoices, ...regionChoices, ...addressChoices, ...all])];
   const carrierGroups = ['移动', '电信', '联通', '多线', '其他'].map(name => group(`运营商 | ${name}`, byCarrier.get(name) || [])).join('\n');
   const regionGroups = [...byRegion.keys()].map(name => group(`地区 | ${name}`, byRegion.get(name) || [])).join('\n');
   const host = rebuildSafe(env.PROXY_HOST || env.HOST || requestHost);
