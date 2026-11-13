@@ -5,6 +5,13 @@ on:
   push:
     paths:
       - 'worker.js'
+      - 'gateway-worker.js'
+      - 'node-worker.js'
+      - 'panel-worker.js'
+      - 'page.js'
+      - 'upstream/**'
+      - 'wrangler*.toml'
+      - '.github/workflows/package-worker.yml'
 
 permissions:
   contents: write
@@ -21,7 +28,7 @@ jobs:
       - name: Package worker file
         run: |
           rm -f worker.zip
-          zip -9 worker.zip worker.js
+          zip -9 worker.zip worker.js gateway-worker.js node-worker.js panel-worker.js page.js wrangler.toml wrangler.gateway.toml upstream/cmliu-worker.js upstream/zitianya9110-worker.js README.md LICENSE
 
       - name: Commit packaged worker
         uses: stefanzweifel/git-auto-commit-action@v5
