@@ -90,6 +90,7 @@ if (!records.length) throw new Error('No public source data available; existing 
 const payload = createDataset(records, results.map((result) => result.status).filter(Boolean));
 const outputs = [
   ['cfip.json', JSON.stringify(payload, null, 2) + '\n'],
+  ['snapshot.js', 'export default ' + JSON.stringify(payload) + ';\n'],
   ['cfip-all.txt', renderNodeList(payload.nodes)],
   ['cfip-ipv4.txt', renderNodeList(payload.nodes.filter((node) => node.family === 4))],
   ['cfip-ipv6.txt', renderNodeList(payload.nodes.filter((node) => node.family === 6))],

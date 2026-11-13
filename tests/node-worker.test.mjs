@@ -7,8 +7,8 @@ import gateway from '../gateway-worker.js';
 // A malicious path must not activate an upstream's proxy-override parser.
 const source = await readFile(new URL('../node-worker.js', import.meta.url), 'utf8');
 const fixture = source.replace(
-  "import { upstreamWebSocket } from './upstream/cmliu-worker.js';",
-  'const upstreamWebSocket = async (request, uuid, url, context) => Response.json({context});',
+  "import { upstreamWebSocket, upstreamPublicWebSocket } from './upstream/cmliu-worker.js';",
+  'const upstreamWebSocket = async (request, uuid, url, context) => Response.json({context}); const upstreamPublicWebSocket = async () => new Response("public");',
 );
 const path = join(tmpdir(), `cf-direct-adapter-${process.pid}.mjs`);
 try {
@@ -22,6 +22,8 @@ try {
   assert.equal(context.代理全局, false);
   assert.equal(context.反代兜底, false);
   assert.equal((await node.fetch(new Request('https://example.test/'), {})).status, 503);
+  assert.equal((await node.fetch(new Request('https://example.test/compat'), env)).status, 403);
+  assert.equal(await (await node.fetch(new Request('https://example.test/compat'), { ...env, ENABLE_PUBLIC_FALLBACK: 'true' })).text(), 'public');
 } finally {
   await unlink(path);
 }

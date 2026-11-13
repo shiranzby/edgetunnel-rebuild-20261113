@@ -10,6 +10,7 @@ on:
       - 'panel-worker.js'
       - 'page.js'
       - 'upstream/**'
+      - 'data/snapshot.js'
       - 'wrangler*.toml'
       - '.github/workflows/package-worker.yml'
 
@@ -28,7 +29,7 @@ jobs:
       - name: Package worker file
         run: |
           rm -f worker.zip
-          zip -9 worker.zip worker.js gateway-worker.js node-worker.js panel-worker.js page.js wrangler.toml wrangler.gateway.toml upstream/cmliu-worker.js upstream/zitianya9110-worker.js README.md LICENSE
+          zip -9 worker.zip worker.js gateway-worker.js node-worker.js panel-worker.js page.js wrangler.toml wrangler.gateway.toml data/snapshot.js upstream/cmliu-worker.js upstream/zitianya9110-worker.js README.md LICENSE
 
       - name: Commit packaged worker
         uses: stefanzweifel/git-auto-commit-action@v5

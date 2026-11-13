@@ -2,7 +2,7 @@ export function renderPage(data, origin, panelOrigin = origin) {
   const initial = JSON.stringify({
     generatedAt: data.generatedAt, sources: data.sources || [],
     candidateCount: data.candidateCount ?? data.clientNodes?.length ?? 0,
-    rows: data.rows || [], origin, panelOrigin,
+    rows: data.rows || [], origin, panelOrigin, publicFallback: data.publicFallback === true, runtimeSnapshot: data.runtimeSnapshot === true,
   }).replace(/</g, '\\u003c');
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
@@ -58,7 +58,7 @@ function show(name){document.querySelectorAll('[data-tab]').forEach(b=>b.setAttr
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));
 if(location.hash==='#ranking'||location.pathname==='/best')show('ranking');
 $('counts').textContent=rows.length+' 条完整来源记录 · '+initial.candidateCount+' 个订阅候选';
-$('updated').textContent='合并时间：'+(initial.generatedAt||'未提供')+' · 不依赖天翼云电脑';
+$('updated').textContent='合并时间：'+(initial.generatedAt||'未提供')+(initial.runtimeSnapshot?' · 内置 / 上次成功快照，后台刷新中':' · 不依赖天翼云电脑');
 for(const source of initial.sources){const span=document.createElement('span');span.textContent=source.name+'：'+source.count+' 条 · '+(source.localOnly?'历史快照':source.cached?'沿用上次成功数据':'公开源已同步')+' · '+(source.fetchedAt||'未提供');$('sources').append(span)}
 for(const region of [...new Set(rows.map(x=>x.region))].sort()){const o=document.createElement('option');o.textContent=region;$('region').append(o)}
 function latency(x){if(x.latency!=null)return Number(x.latency);return parseFloat(x.latencyText)||Infinity}
@@ -75,7 +75,8 @@ $('prev').onclick=()=>{page--;render()};$('next').onclick=()=>{page++;render()};
 $('make-links').onclick=()=>{const key=$('subkey').value.trim(),out=$('sub-links');out.replaceChildren();if(!key){$('feedback').textContent='请输入订阅密钥。';return}const clash=base+'/sub?token='+encodeURIComponent(key)+'&clash',v2ray=base+'/sub?token='+encodeURIComponent(key)+'&v2ray';
 for(const [name,href] of [['导入 Sparkle / Clash','clash://install-config?url='+encodeURIComponent(clash)+'&name=ShyVPN'],['下载 Clash 配置',clash],['下载 VLESS 订阅',v2ray]]){const a=document.createElement('a');a.className='button';a.textContent=name;a.href=href;out.append(a)}
 const copyV2=document.createElement('button');copyV2.textContent='复制 v2rayN 订阅链接';copyV2.onclick=async()=>{try{await navigator.clipboard.writeText(v2ray);$('feedback').textContent='已复制，可在 v2rayN 中添加订阅。'}catch{$('feedback').textContent='请打开 VLESS 订阅后复制地址。'}};out.append(copyV2);
+if(initial.publicFallback){const compatible=clash+'&compat=1';for(const [name,href] of [['导入兼容订阅（公共回退）','clash://install-config?url='+encodeURIComponent(compatible)+'&name=ShyVPN-Compat'],['下载兼容配置（公共回退）',compatible]]){const a=document.createElement('a');a.className='button';a.textContent=name;a.href=href;out.append(a)}const note=document.createElement('p');note.className='note';note.textContent='兼容订阅在 CF 直出失败时使用上游公共回退；不经过你的个人 VPS。上面的默认链接保持仅直出。';out.append(note)}
 const copy=document.createElement('button');copy.textContent='复制 Clash 订阅链接';copy.onclick=async()=>{try{await navigator.clipboard.writeText(clash);$('feedback').textContent='已复制订阅链接。'}catch{$('feedback').textContent='无法访问剪贴板，请打开下载链接后复制地址。'}};out.append(copy);out.hidden=false;$('feedback').textContent='已生成。订阅可直接下载，客户端无需登录 Cloudflare。'};
-if(location.origin!==base){fetch(base+'/rankings.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error();return r.json()}).then(fresh=>{rows.splice(0,rows.length,...fresh.rows);$('counts').textContent=rows.length+' 条完整来源记录 · '+fresh.clientNodes.length+' 个订阅候选';$('updated').textContent='合并时间：'+fresh.generatedAt+' · 已从 Worker 更新';$('sources').replaceChildren();for(const source of fresh.sources||[]){const span=document.createElement('span');span.textContent=source.name+'：'+source.count+' 条 · '+(source.cached?'沿用快照':'已同步')+' · '+source.fetchedAt;$('sources').append(span)}render()}).catch(()=>{$('updated').textContent+=' · 在线刷新暂不可用，显示构建时快照'})}
+if(location.origin!==base){fetch(base+'/rankings.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error();return r.json()}).then(fresh=>{rows.splice(0,rows.length,...fresh.rows);initial.publicFallback=fresh.publicFallback===true;$('counts').textContent=rows.length+' 条完整来源记录 · '+fresh.clientNodes.length+' 个订阅候选';$('updated').textContent='合并时间：'+fresh.generatedAt+(fresh.runtimeSnapshot?' · 内置 / 上次成功快照，后台刷新中':' · 已从 Worker 更新');$('sources').replaceChildren();for(const source of fresh.sources||[]){const span=document.createElement('span');span.textContent=source.name+'：'+source.count+' 条 · '+(source.cached?'沿用快照':'已同步')+' · '+source.fetchedAt;$('sources').append(span)}render()}).catch(()=>{$('updated').textContent+=' · 在线刷新暂不可用，显示构建时快照'})}
 </script></body></html>`;
 }

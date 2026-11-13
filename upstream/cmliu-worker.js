@@ -33159,3 +33159,14 @@ Chapter 36
 
 // Local adapter: call the upstream protocol engine with an explicit direct-only context.
 export { 处理WS请求 as upstreamWebSocket };
+// Optional upstream public compatibility path, isolated from all personal/VPS settings.
+export function upstreamPublicWebSocket(request, uuid) {
+	const url = new URL(request.url);
+	url.pathname = '/';
+	url.search = '';
+	const publicAddress = `${request.cf?.colo || 'LAX'}.${特征码字典[0]}.${特征码字典[1]}SsSs.nEt`.toLowerCase();
+	return 处理WS请求(request, uuid, url, {
+		木马反代地址: null, 反代IP: publicAddress, 代理类型: null,
+		代理账号: '', 代理全局: false, 代理参数: {}, 反代兜底: true
+	});
+}

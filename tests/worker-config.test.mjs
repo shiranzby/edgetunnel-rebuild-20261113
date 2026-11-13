@@ -86,6 +86,13 @@ assert.equal(legacy.status, 200);
 assert.equal(legacy.headers.get('location'), null);
 const autoV2 = await workerDefault.fetch(new Request('https://example.test/sub?token=test-token', { headers: { 'User-Agent': 'v2rayN/7' } }), env, ctx);
 assert.match(Buffer.from(await autoV2.text(), 'base64').toString('utf8'), /^vless:\/\//);
+const blockedCompatibility = await workerDefault.fetch(new Request('https://example.test/sub?token=test-token&compat=1'), env, ctx);
+assert.equal(blockedCompatibility.status, 403);
+const compatibility = await workerDefault.fetch(new Request('https://example.test/sub?token=test-token&compat=1'), { ...env, ENABLE_PUBLIC_FALLBACK: 'true' }, ctx);
+const compatibilityBody = await compatibility.text();
+assert.match(compatibilityBody, /"path":"\/compat"/);
+assert.match(compatibilityBody, /公共兼容/);
+assert.doesNotMatch(clashBody, /"path":"\/compat"/);
 
 const large = Array.from({ length: 350 }, (_, index) => ({
   ip: `192.0.${Math.floor(index / 250)}.${index % 250 + 1}`, port: 443,
@@ -97,6 +104,17 @@ const complete = await workerDefault.fetch(new Request('https://example.test/sub
 assert.equal((await complete.text()).match(/"type":"vless"/g).length, 350);
 const fullRanking = await workerDefault.fetch(new Request('https://example.test/rankings.json'), largeEnv, ctx);
 assert.equal((await fullRanking.json()).rows.length, 351);
+
+// A stalled public JSON source must not stall a client's subscription update.
+globalThis.fetch = () => new Promise(() => {});
+const stalledAt = Date.now();
+const offline = await workerDefault.fetch(new Request('https://example.test/sub?token=test-token&clash'), { ...env, CFIP_DATA_URL: 'https://fixture.invalid/stalled' }, ctx);
+assert.equal(offline.status, 200);
+assert.ok(Date.now() - stalledAt < 2500, 'subscription waited for the stalled source');
+assert.match(await offline.text(), /"type":"vless"/);
+globalThis.fetch = async () => { throw new Error('fixture unavailable'); };
+const archived = await workerDefault.fetch(new Request('https://example.test/rankings.json'), { ...env, CFIP_DATA_URL: 'https://fixture.invalid/unavailable' }, ctx);
+assert.equal((await archived.json()).runtimeSnapshot, true);
 
 globalThis.fetch = originalFetch;
 console.log('isolated worker tests passed');
