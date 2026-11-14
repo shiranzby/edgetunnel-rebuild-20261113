@@ -1,5 +1,13 @@
 # 当前交付入口
 
+## 2026-11-14 临时 Mihomo 核心验收
+
+用户明确禁止再次启动隔离 Sparkle 客户端；后续真实业务验收只启动 `E:\工具\Sparkle\resources\sidecar\mihomo.exe`，不修改正式 Sparkle 数据目录，也不占用正式 `7890/7891/7892`。临时 Mihomo 使用一次性 C 盘工作目录和独立端口，结束后删除核心、配置和临时目录。
+
+本轮在本机中国移动物理 IPv4 接口 10、源地址 `192.168.6.153` 下验证 `shw.us.ci` 当前实时订阅：订阅 HTTP 200、Clash 配置校验通过；`104.18.39.37`（新加坡 SIN 004）使用 `17890/17891`，Mihomo 延迟 3873 ms；`172.64.229.7`（日本 NRT 001）使用 `17892/17893`，Mihomo 延迟 2074 ms。两个节点均完成第一次网页、下载、第二次网页，三次请求均 HTTP 200。未使用系统代理、香港 VPS、Google Oregon VPS 或 Sparkle 图形客户端。脱敏截图和 JSON 证据位于 `F:/WorkSpace/设备管理/shyvpn-review-20261113/acceptance-20261114/`。
+
+测试脚本若将 `tempfile.mkdtemp(..., dir=F:)` 作为工作目录，可能在当前 Windows 环境卡住；一次性工作目录应放在 C 盘并在退出时校验删除。不要把这个环境问题误判成节点超时。
+
 ## ShyVPN EdgeTunnel 重建（2026-11-14）
 
 这是当前权威状态。原始仓库 `shiranzby/edgetunnel` 保留；重建仓库为 `F:/WorkSpace/Myproject/edgetunnel-rebuild-20261113/repo`。
