@@ -54,7 +54,7 @@ function enhancePanel(meta) {
         singboxLink: base + '&singbox', compatClashLink: base + '&clash&compat=1' };
       for (const [id, value] of Object.entries(links)) document.getElementById(id).value = value;
       document.getElementById('shy-import-sparkle').href = 'clash://install-config?url=' +
-        encodeURIComponent(links.compatClashLink) + '&name=ShyVPN-Compat';
+        encodeURIComponent(links.clashLink) + '&name=ShyVPN';
     } else {
       for (const input of document.querySelectorAll('.module input, .module textarea, .module select')) {
         if (!input.closest('.shy-login-prompt')) input.disabled = true;
@@ -63,7 +63,12 @@ function enhancePanel(meta) {
   };
   const onReady = () => {
     const authButton = document.querySelector('[onclick="logout()"]');
-    const applyAuthenticatedUI = () => {
+    const applyAuthenticatedUI = async () => {
+      const response = await originalFetch('/__shy_admin/config.json', {
+        credentials: 'same-origin', cache: 'no-store',
+      });
+      if (!response.ok) return;
+      currentConfig = await response.json();
       meta.authenticated = true;
       document.body.classList.remove('shy-guest');
       document.body.classList.add('shy-admin');
@@ -106,10 +111,13 @@ function enhancePanel(meta) {
         event.preventDefault(); event.stopImmediatePropagation(); showLogin();
       }
     }, true);
-    if (!meta.authenticated && !meta.preview) {
+    if (!meta.preview) {
       originalFetch('/session', { credentials: 'same-origin', cache: 'no-store' })
         .then(response => response.ok ? response.json() : null)
-        .then(data => { if (data?.authenticated) applyAuthenticatedUI(); })
+        .then(data => {
+          if (data?.authenticated && !meta.authenticated) return applyAuthenticatedUI();
+          if (data?.authenticated === false && meta.authenticated) location.reload();
+        })
         .catch(() => {});
     }
     if (location.pathname === '/login') showLogin();
