@@ -3,7 +3,10 @@ import test from 'node:test';
 import { createHash } from 'node:crypto';
 import panel, { publicConfig } from '../panel-worker.js';
 import gateway from '../gateway-worker.js';
+import admin from '../admin-worker.js';
 import { administrator } from '../panel-auth.js';
+import loginWorker from '../login-worker.js';
+import { renderSettingsPage } from '../settings-page.js';
 import { upstreamPanelCookieHash } from '../upstream/cmliu-worker.js';
 
 // Workers WebCrypto supports MD5; Node WebCrypto needs a real MD5 adapter for this upstream API.
@@ -35,6 +38,8 @@ test('homepage is the original full page with three account gates and no outer p
   assert.equal((html.match(/class="shy-login-prompt"/g) || []).length, 3);
   assert.match(html, /id="modeToggleBtn"[\s\S]*?<\/button><a[^>]*id="shy-rankings"/);
   assert.doesNotMatch(html, /id="panel"/);
+  assert.match(html, /name="username"[^>]*value=""/);
+  assert.doesNotMatch(html, /name="username"[^>]*value="shiran"/);
   for (const secret of [env.ADMIN, env.KEY, env.UUID, env.SUB_TOKEN]) assert.ok(!html.includes(secret));
 });
 
@@ -115,4 +120,51 @@ test('legacy browser pages redirect without redirecting subscriptions or WebSock
   }
   assert.equal((await gateway.fetch(new Request('https://shyvpn.cc.cd/', { headers: { Upgrade: 'websocket' } }), binding)).status, 200);
   assert.equal(calls, 3);
+});
+
+test('online settings are protected, branding is public-safe, and credential rotation invalidates old sessions', async () => {
+  const storage = new Map();
+  const mutableEnv = { ...env, KV: {
+    get: async key => storage.get(key) || null,
+    put: async (key, value) => { storage.set(key, value); },
+  } };
+  const initialLogin = await loginWorker.fetch(request('/login', {
+    method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: env.ADMIN }),
+  }), mutableEnv, ctx);
+  const initialCookie = initialLogin.headers.get('Set-Cookie').split(';')[0];
+  assert.equal((await admin.fetch(request('/__shy_admin/site-settings.json', {
+    headers: { Cookie: initialCookie },
+  }), mutableEnv, ctx)).status, 200);
+  const invalid = await admin.fetch(request('/__shy_admin/site-settings.json', {
+    method: 'POST', headers: { Cookie: initialCookie, Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ site: { pageTitle: 'x', browserTitle: 'x', logoUrl: 'javascript:alert(1)' } }),
+  }), mutableEnv, ctx);
+  assert.equal(invalid.status, 400);
+  const valid = await admin.fetch(request('/__shy_admin/site-settings.json', {
+    method: 'POST', headers: { Cookie: initialCookie, Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ site: { pageTitle: '测试标题', browserTitle: '测试标签', logoUrl: 'https://example.com/logo.png',
+      faviconUrl: '/favicon.ico', wallpaperUrl: 'https://example.com/wallpaper.jpg', wallpaperSize: 'contain' } }),
+  }), mutableEnv, ctx);
+  assert.equal(valid.status, 200);
+  const settings = await valid.json();
+  assert.equal(settings.site.pageTitle, '测试标题');
+  assert.equal(settings.site.logoUrl, 'https://example.com/logo.png');
+  assert.doesNotMatch(JSON.stringify(settings), /fixture-admin-password|fixture-signing-key/);
+  const rotated = await admin.fetch(request('/__shy_admin/credentials', {
+    method: 'POST', headers: { Cookie: initialCookie, Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword: env.ADMIN, username: 'new-admin',
+      password: 'new-password-8', confirmPassword: 'new-password-8' }),
+  }), mutableEnv, ctx);
+  assert.equal(rotated.status, 200);
+  assert.match(rotated.headers.get('Set-Cookie'), /Max-Age=0/);
+  assert.equal(await administrator(request('/', { headers: { Cookie: initialCookie } }), mutableEnv), false);
+  const newLogin = await loginWorker.fetch(request('/login', {
+    method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'new-admin', password: 'new-password-8' }),
+  }), mutableEnv, ctx);
+  assert.equal(newLogin.status, 200);
+  const rendered = renderSettingsPage({ site: settings.site, adminUser: 'new-admin' });
+  assert.ok(!rendered.includes('new-password-8'));
+  assert.ok(rendered.includes('当前管理员账号'));
 });

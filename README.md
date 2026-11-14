@@ -12,6 +12,7 @@
 - `panel-view-no-script1.js`、`upstream/panel-template-no-script1.js`：原版面板模板；CFST 增强脚本按需从 `/__shy_panel_cfst.js` 加载，避免首页一次性执行过多内嵌脚本。
 - `panel-worker.js`：公开页面、安全配置投影和管理页面；游客可以查看普通内容，三个私有区域在登录后解锁。
 - `panel-auth.js`：管理员账号、密码登录和签名会话；订阅令牌、UUID、Cloudflare 密钥和旧上游 Cookie 不授予面板管理权限。
+- `settings-page.js`：独立 `/settings` 设置页；账号密码使用 KV 哈希记录在线修改，网页标题、Logo、Favicon 和壁纸使用安全公开字段在线修改。
 - `session-worker.js`、`login-worker.js`、`admin-worker.js`、`public-worker.js`：将登录、会话、管理员接口和公开接口分开部署。
 - `subscription-worker.js`：读取公开合并快照，生成 Clash/Mihomo、V2Ray 和 Sing-box 订阅以及排名数据。
 - `node-worker.js`：只处理 VLESS over WebSocket 节点连接；节点入口是 Cloudflare 优选 IP，WebSocket Host 和 TLS SNI 都使用 `shw.us.ci`。
@@ -32,6 +33,8 @@
 - 查看操作日志。
 
 未登录时这些区域只显示登录入口，不把 UUID、订阅令牌、节点链接或后台配置写进 HTML。登录后由签名会话访问 `/admin/config.json`、`/admin/log.json` 等私有接口；写操作仍要求同源请求和管理员会话。
+
+登录表单默认不预填管理员账号或密码。管理员登录后可以打开 `/settings` 修改账号密码和网站外观；账号或密码保存后旧会话立即失效。图片字段只接受 `http(s)` 或安全相对路径，密码不会回传到页面。
 
 ## 订阅
 
@@ -74,6 +77,10 @@ Worker 对公开 JSON 使用短缓存并保留内置快照。数据提交后不�
 - `KV`：管理面板配置存储。
 
 凭据通过 Cloudflare Secret 或本机私密部署文件设置，不写入 Git、网页、截图或日志。正式域名只绑定公开入口；拆分部署时由路径路由把页面、订阅和节点转给对应 Worker。
+
+在线设置使用两个 KV 键：`admin-auth.json` 保存随机盐和密码哈希，`site-settings.json` 保存公开外观字段。认证和会话 Worker 必须同时绑定同一个 KV 命名空间。
+
+上游 `cmliu/edgetunnel` 当前主分支的 1101 修复已经包含在本地 `upstream/cmliu-worker.js` 中。本地文件与上游当前协议文件一致，只有拆分部署所需的少量导出适配，因此没有整体覆盖协议核心。
 
 ## 本地检查
 

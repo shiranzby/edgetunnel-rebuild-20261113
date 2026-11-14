@@ -42,3 +42,6 @@
 4. 默认订阅保持 Cloudflare 直出；任何公共兼容回退都必须单独标记，不能悄悄经过个人 VPS。
 5. 数据源失败时保留最后成功快照和原始时间，订阅快速返回，不把快照冒充实时测速。
 6. 代码修改后运行 `npm test`、`npm run check`、`npm run build:pages`，并用物理移动 IPv4复核订阅和实际业务。
+7. 2026-11-14 已增加独立 `https://shw.us.ci/settings` 设置页。认证 Worker、会话 Worker 和管理员 Worker 共用同一 KV；`admin-auth.json` 保存随机盐与密码哈希，账号或密码修改后旧 Cookie 自动失效；`site-settings.json` 保存页面标题、浏览器标题、Logo、Favicon 和壁纸 URL。
+8. 登录表单已去掉账号预填，游客页面不会输出管理员密码、UUID 或订阅令牌。外观 URL 只接受 `http(s)` 或安全相对路径，线上移动物理 IPv4 已验证设置页、会话和私有外观接口。
+9. 对照上游 `cmliu/edgetunnel` 当前主分支 `5b2aaf0` 后确认，本地 `upstream/cmliu-worker.js` 已包含 1101 修复；文件差异仅是本地拆分架构使用的导出适配，不要整体覆盖协议核心。

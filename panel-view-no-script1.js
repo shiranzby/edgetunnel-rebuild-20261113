@@ -7,13 +7,38 @@ const protectedTitles = [
 ];
 
 function loginForm() {
-  return `<form class="shy-login-form"><label>管理员账号<input name="username" autocomplete="username" value="shiran" required></label>
+  return `<form class="shy-login-form"><label>管理员账号<input name="username" autocomplete="username" value="" required></label>
 <label>管理员密码<input name="password" type="password" autocomplete="current-password" placeholder="请输入管理员密码" required></label>
 <button class="btn btn-primary" type="submit">登录并查看</button><p class="shy-login-status" role="status"></p></form>`;
 }
 
 function enhancePanel(meta) {
   const originalFetch = window.fetch.bind(window);
+  const branding = meta.branding || {};
+  const applyBranding = () => {
+    const title = branding.browserTitle || 'ShyVPN';
+    document.title = title;
+    const pageTitle = document.getElementById('pageTitle');
+    if (pageTitle && branding.pageTitle) pageTitle.textContent = branding.pageTitle;
+    const logo = document.getElementById('shy-site-logo');
+    if (logo) {
+      if (branding.logoUrl) {
+        logo.src = branding.logoUrl;
+        logo.alt = branding.pageTitle || title;
+        logo.style.display = 'block';
+      } else {
+        logo.style.display = 'none';
+      }
+    }
+    if (branding.wallpaperUrl) {
+      document.body.style.backgroundImage = `url(${JSON.stringify(branding.wallpaperUrl)})`;
+      document.body.style.backgroundSize = branding.wallpaperSize || 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundAttachment = 'fixed';
+    } else {
+      document.body.style.backgroundImage = '';
+    }
+  };
   const showLogin = () => {
     if (meta.preview) { location.href = meta.origin + '/login'; return; }
     document.getElementById('shy-login-dialog').showModal();
@@ -47,6 +72,7 @@ function enhancePanel(meta) {
   renderUI = function () {
     upstreamRender();
     document.title = (currentConfig.优选订阅生成?.SUBNAME || 'ShyVPN') + ' 设置页面';
+    applyBranding();
     if (meta.authenticated) {
       const token = encodeURIComponent(currentConfig.优选订阅生成.TOKEN);
       const base = meta.origin + '/sub?token=' + token;
@@ -80,6 +106,14 @@ function enhancePanel(meta) {
         authButton.textContent = '👋退出登录';
         authButton.onclick = () => { location.href = '/logout'; };
       }
+      if (!document.getElementById('shy-settings')) {
+        const settings = document.createElement('a');
+        settings.id = 'shy-settings';
+        settings.className = 'btn btn-primary';
+        settings.href = '/settings';
+        settings.textContent = '⚙️站点设置';
+        authButton?.parentElement?.append(settings);
+      }
       renderUI();
     };
     if (authButton) {
@@ -101,7 +135,8 @@ function enhancePanel(meta) {
           const result = await response.json();
           if (!response.ok || !result.success) throw new Error(result.error || '登录失败');
           form.reset();
-          location.href = '/';
+          const next = new URLSearchParams(location.search).get('next');
+          location.href = next && next.startsWith('/') ? next : '/';
         } catch (error) { status.textContent = error.message; }
         finally { button.disabled = false; }
       });
@@ -120,6 +155,7 @@ function enhancePanel(meta) {
         })
         .catch(() => {});
     }
+    applyBranding();
     if (location.pathname === '/login') showLogin();
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', onReady);
@@ -127,16 +163,41 @@ function enhancePanel(meta) {
   window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
 }
 
-export function renderPanel({ authenticated = false, origin = 'https://shw.us.ci', preview = false } = {}) {
+function safeBranding(value = {}) {
+  const cleanUrl = input => {
+    if (typeof input !== 'string' || !input) return '';
+    if (input.startsWith('/')) return /^[\w./?&#=%:+~-]+$/.test(input) ? input : '';
+    try {
+      const url = new URL(input);
+      return ['https:', 'http:'].includes(url.protocol) ? url.href : '';
+    } catch {
+      return '';
+    }
+  };
+  return {
+    pageTitle: typeof value.pageTitle === 'string' ? value.pageTitle.slice(0, 80) : '',
+    browserTitle: typeof value.browserTitle === 'string' ? value.browserTitle.slice(0, 80) : '',
+    logoUrl: cleanUrl(value.logoUrl),
+    faviconUrl: cleanUrl(value.faviconUrl),
+    wallpaperUrl: cleanUrl(value.wallpaperUrl),
+    wallpaperSize: ['cover', 'contain', 'auto'].includes(value.wallpaperSize) ? value.wallpaperSize : 'cover',
+  };
+}
+
+export function renderPanel({ authenticated = false, origin = 'https://shw.us.ci', preview = false, branding = {} } = {}) {
   let html = template.replace('<body>', `<body class="${authenticated ? 'shy-admin' : 'shy-guest'}">`)
     .replace(' 设置页面 - 管理后台', ' 设置页面');
+  const site = safeBranding(branding);
+  html = html.replace('<h1 id="pageTitle">加载中...</h1>',
+    '<img id="shy-site-logo" alt="" style="display:none" loading="lazy" referrerpolicy="no-referrer"><h1 id="pageTitle">加载中...</h1>');
   for (const [title, id] of protectedTitles) {
     const pattern = new RegExp('(<div class="module[^"]*)(">\\s*<div class="module-title"[^>]*>\\s*[^<]*' + title + '[\\s\\S]*?</div>)');
     html = html.replace(pattern, `$1 shy-sensitive" data-protected="${id}$2` +
       (authenticated ? '' : `<div class="shy-login-prompt"><p>此部分仅管理员可查看，请输入管理员账号和密码。</p>${loginForm()}</div>`));
   }
+  const settingsLink = authenticated ? '<a class="btn btn-primary" id="shy-settings" href="/settings">⚙️站点设置</a>' : '';
   html = html.replace(/(id="modeToggleBtn"[\s\S]*?<\/button>)/,
-    '$1<a class="btn btn-primary" id="shy-rankings" href="/best">节点排名</a>');
+    `$1<a class="btn btn-primary" id="shy-rankings" href="/best">节点排名</a>${settingsLink}`);
   const compat = `<div class="form-group"><label for="compatClashLink">公共兼容订阅</label><div class="input-wrapper subscription-link-wrapper">
 <input type="text" id="compatClashLink" readonly><div class="btn-container"><button type="button" class="btn btn-primary" onclick="copySubscription('compatClashLink')">复制订阅</button>
 <a class="btn btn-primary" id="shy-import-sparkle">导入 Sparkle</a></div></div></div>`;
@@ -157,12 +218,15 @@ body.shy-guest .shy-sensitive>:not(.module-title):not(.shy-login-prompt){display
 #shy-login-dialog .shy-login-form{display:block}
 #shy-login-dialog label{margin:16px 0}
 #shy-login-dialog .shy-close{float:right;border:0;background:none;font-size:24px;color:inherit;cursor:pointer}
+#shy-site-logo{width:42px;height:42px;object-fit:contain;margin-right:12px;align-self:center;border-radius:10px}
+.header-title{display:flex;align-items:center;gap:8px}
 .header-buttons a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 @media(max-width:600px){.shy-login-form{display:block}.shy-login-form label{margin-bottom:14px}.shy-login-form button{width:100%}}
 </style>`;
-  const meta = JSON.stringify({ authenticated, origin, preview }).replace(/</g, '\\u003c');
+  const meta = JSON.stringify({ authenticated, origin, preview, branding: site }).replace(/</g, '\\u003c');
   const dialog = `<dialog id="shy-login-dialog"><button class="shy-close" aria-label="关闭登录" onclick="this.closest('dialog').close()">×</button><h2>管理员登录</h2>${loginForm()}</dialog>`;
   html = html.replace('</head>', css + '</head>');
+  if (site.faviconUrl) html = html.replace('</head>', `<link rel="icon" href="${site.faviconUrl}" referrerpolicy="no-referrer"></head>`);
   // The upstream includes nested document templates; append to the outer body.
   const end = html.lastIndexOf('</body>');
   html = html.slice(0, end) + dialog + `<script>(${enhancePanel.toString()})(${meta});</script>` + html.slice(end);

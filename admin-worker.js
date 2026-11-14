@@ -1,4 +1,15 @@
-import { administrator, privateCredentials, privateJSON, sameOrigin } from './panel-auth.js';
+import {
+  administrator, hashPassword, newPasswordSalt, privateCredentials, privateJSON, sameOrigin,
+} from './panel-auth.js';
+
+const defaultSiteSettings = {
+  pageTitle: 'ShyVPN EdgeTunnel',
+  browserTitle: 'ShyVPN',
+  logoUrl: '',
+  faviconUrl: '',
+  wallpaperUrl: '',
+  wallpaperSize: 'cover',
+};
 
 async function text(env, key, fallback = '') {
   try {
@@ -21,6 +32,38 @@ function hostOf(env) {
   return String(env.PROXY_HOST || env.HOST || 'shw.us.ci');
 }
 
+function cleanText(value, max) {
+  return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+function cleanAssetUrl(value) {
+  const text = cleanText(value, 2048);
+  if (!text) return '';
+  if (text.startsWith('/')) return /^[\w./?&#=%:+~-]+$/.test(text) ? text : null;
+  try {
+    const url = new URL(text);
+    return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeSiteSettings(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const pageTitle = cleanText(value.pageTitle, 80);
+  const browserTitle = cleanText(value.browserTitle, 80);
+  const logoUrl = cleanAssetUrl(value.logoUrl);
+  const faviconUrl = cleanAssetUrl(value.faviconUrl);
+  const wallpaperUrl = cleanAssetUrl(value.wallpaperUrl);
+  if (!pageTitle || !browserTitle || logoUrl === null || faviconUrl === null || wallpaperUrl === null) return null;
+  const wallpaperSize = ['cover', 'contain', 'auto'].includes(value.wallpaperSize) ? value.wallpaperSize : 'cover';
+  return { pageTitle, browserTitle, logoUrl, faviconUrl, wallpaperUrl, wallpaperSize };
+}
+
+function clearCookie() {
+  return 'shy_admin=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
+}
+
 export default {
   async fetch(request, env) {
     try {
@@ -31,6 +74,42 @@ export default {
         return privateJSON({ error: '请从本站提交操作' }, 403);
       }
       const credentials = await privateCredentials(env);
+      if (path === '/admin/site-settings.json' && request.method === 'GET') {
+        const stored = await jsonValue(env, 'site-settings.json', {});
+        const site = normalizeSiteSettings({ ...defaultSiteSettings, ...stored }) || defaultSiteSettings;
+        return privateJSON({ site, adminUser: credentials.adminUser, updatedAt: stored.updatedAt || null });
+      }
+      if (path === '/admin/site-settings.json' && request.method === 'POST') {
+        if (!env.KV?.put) return privateJSON({ error: '当前部署未绑定 KV，无法保存网站外观' }, 503);
+        let value;
+        try { value = await request.json(); } catch { return privateJSON({ error: '设置格式错误' }, 400); }
+        const site = normalizeSiteSettings(value?.site);
+        if (!site) return privateJSON({ error: '标题或图片地址无效，仅支持 http(s) 或安全相对路径' }, 400);
+        await env.KV?.put('site-settings.json', JSON.stringify({ ...site, updatedAt: new Date().toISOString() }));
+        return privateJSON({ success: true, site });
+      }
+      if (path === '/admin/credentials' && request.method === 'POST') {
+        if (!env.KV?.put) return privateJSON({ error: '当前部署未绑定 KV，无法在线修改账号密码' }, 503);
+        let value;
+        try { value = await request.json(); } catch { return privateJSON({ error: '账号设置格式错误' }, 400); }
+        const currentPassword = String(value?.currentPassword || '');
+        const currentPasswordOk = credentials.passwordHash ?
+          currentPassword && (await hashPassword(currentPassword, credentials.passwordSalt)) === credentials.passwordHash :
+          currentPassword === credentials.admin;
+        if (!currentPasswordOk) return privateJSON({ error: '当前密码错误' }, 401);
+        const username = cleanText(value?.username, 64);
+        const password = String(value?.password || '');
+        const confirmPassword = String(value?.confirmPassword || '');
+        if (!/^[\w.@-]{1,64}$/.test(username)) return privateJSON({ error: '新管理员账号格式无效' }, 400);
+        if (password.length < 8) return privateJSON({ error: '新密码至少需要 8 个字符' }, 400);
+        if (password !== confirmPassword) return privateJSON({ error: '两次输入的新密码不一致' }, 400);
+        const salt = newPasswordSalt();
+        const passwordHash = await hashPassword(password, salt);
+        await env.KV.put('admin-auth.json', JSON.stringify({
+          username, salt, passwordHash, updatedAt: new Date().toISOString(),
+        }));
+        return privateJSON({ success: true, adminUser: username }, 200, { 'Set-Cookie': clearCookie() });
+      }
       if (path === '/admin/config.json' && request.method === 'GET') {
         const stored = await jsonValue(env, 'config.json', {});
         const config = { ...stored, HOST: hostOf(env), HOSTS: [hostOf(env)], UUID: credentials.uuid,

@@ -2,35 +2,37 @@ const COOKIE = 'shy_admin';
 const lifetime = 86400;
 const encoder = new TextEncoder();
 
-export async function privateCredentials(env) {
-  if (env.ADMIN && env.KEY && env.UUID && env.SUB_TOKEN) {
-    return {
-      admin: String(env.ADMIN),
-      key: String(env.KEY),
-      uuid: String(env.UUID),
-      subToken: String(env.SUB_TOKEN),
-      legacySubToken: String(env.LEGACY_SUB_TOKEN || ''),
-    };
-  }
+async function readJSON(env, key) {
   try {
-    const raw = await env.KV?.get('shy-private-auth.json');
-    const value = raw ? JSON.parse(raw) : {};
-    return {
-      admin: String(env.ADMIN || value.ADMIN || ''),
-      key: String(env.KEY || value.KEY || ''),
-      uuid: String(env.UUID || value.UUID || ''),
-      subToken: String(env.SUB_TOKEN || value.SUB_TOKEN || ''),
-      legacySubToken: String(env.LEGACY_SUB_TOKEN || value.LEGACY_SUB_TOKEN || ''),
-    };
+    const raw = await env.KV?.get(key);
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    return {
-      admin: String(env.ADMIN || ''),
-      key: String(env.KEY || ''),
-      uuid: String(env.UUID || ''),
-      subToken: String(env.SUB_TOKEN || ''),
-      legacySubToken: String(env.LEGACY_SUB_TOKEN || ''),
-    };
+    return null;
   }
+}
+
+export async function privateCredentials(env) {
+  let value = {};
+  try {
+    value = await readJSON(env, 'shy-private-auth.json') || {};
+  } catch {}
+  const online = await readJSON(env, 'admin-auth.json');
+  const onlineValid = online && typeof online.username === 'string' &&
+    /^[\w.@-]{1,64}$/.test(online.username) &&
+    typeof online.salt === 'string' && online.salt.length >= 16 &&
+    typeof online.passwordHash === 'string' && online.passwordHash.length >= 32;
+  return {
+    // When an online credential record exists, use its hash as the signing secret.
+    // This makes every account/password change invalidate existing cookies.
+    admin: String(onlineValid ? online.passwordHash : (env.ADMIN || value.ADMIN || '')),
+    adminUser: String(onlineValid ? online.username : (env.ADMIN_USER || 'admin')),
+    passwordHash: onlineValid ? online.passwordHash : '',
+    passwordSalt: onlineValid ? online.salt : '',
+    key: String(env.KEY || value.KEY || ''),
+    uuid: String(env.UUID || value.UUID || ''),
+    subToken: String(env.SUB_TOKEN || value.SUB_TOKEN || ''),
+    legacySubToken: String(env.LEGACY_SUB_TOKEN || value.LEGACY_SUB_TOKEN || ''),
+  };
 }
 
 function encode(bytes) {
@@ -42,8 +44,20 @@ function decode(text) {
 }
 
 async function signingKey(env, credentials) {
-  return crypto.subtle.importKey('raw', encoder.encode(`${credentials.key}:${credentials.admin}:${env.ADMIN_USER || 'admin'}`),
+  return crypto.subtle.importKey('raw', encoder.encode(`${credentials.key}:${credentials.admin}:${credentials.adminUser}`),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+
+function hex(bytes) {
+  return Array.from(new Uint8Array(bytes), value => value.toString(16).padStart(2, '0')).join('');
+}
+
+export async function hashPassword(password, salt) {
+  return hex(await crypto.subtle.digest('SHA-256', encoder.encode(`${salt}:${password}`)));
+}
+
+export function newPasswordSalt() {
+  return crypto.randomUUID() + crypto.randomUUID();
 }
 
 export async function administrator(request, env) {
@@ -56,7 +70,7 @@ export async function administrator(request, env) {
     const valid = await crypto.subtle.verify('HMAC', await signingKey(env, credentials), decode(signature), encoder.encode(payload));
     if (!valid) return false;
     const claims = JSON.parse(new TextDecoder().decode(decode(payload)));
-    return claims.user === (env.ADMIN_USER || 'admin') && Number.isFinite(claims.expires) &&
+    return claims.user === credentials.adminUser && Number.isFinite(claims.expires) &&
       claims.expires > Date.now() && claims.expires <= Date.now() + lifetime * 1000;
   } catch {
     return false;
@@ -83,7 +97,11 @@ export async function login(request, env) {
   } catch {
     return privateJSON({ success: false, error: '登录信息格式错误' }, 400);
   }
-  if (fields.username !== (env.ADMIN_USER || 'admin') || fields.password !== credentials.admin) {
+  const usernameOk = fields.username === credentials.adminUser;
+  const passwordOk = credentials.passwordHash ?
+    fields.password && (await hashPassword(String(fields.password), credentials.passwordSalt)) === credentials.passwordHash :
+    fields.password === credentials.admin;
+  if (!usernameOk || !passwordOk) {
     return privateJSON({ success: false, error: '管理员账号或密码错误' }, 401);
   }
   const payload = encode(encoder.encode(JSON.stringify({ user: fields.username,
