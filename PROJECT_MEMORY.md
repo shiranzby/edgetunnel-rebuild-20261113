@@ -1,5 +1,13 @@
 # 当前交付入口
 
+## 2026-11-14 代理组与 AI 访问验收
+
+登录表单账号框已增加灰色 `请输入管理员账号` placeholder，密码框保留 `请输入管理员密码`；正式页面已重新部署，移动物理 IPv4 首页 HTTP 200 且两个 placeholder 都存在。订阅 Worker 已重新部署，线上 Clash 配置包含 17 个代理组：主 `Selector`、全节点 `⚡ 自动选择`、全节点 `🤖 AI 代理`、运营商组、地区组和 IPv4/IPv6 组。
+
+运营商、地区和地址族子组改为 `url-test`，因此用户选择地区组后会在该组内部自动测速；单个 VLESS 条目仍是直接节点。AI 组用 `https://chatgpt.com/`、HTTP 200 做本地客户端测试，ChatGPT/OpenAI 规则指向该组。独立 Mihomo Meta 1.19.33 使用中国移动物理 IPv4 接口 10、源 `192.168.6.153`，没有启动 Sparkle，没有使用系统代理、香港 VPS 或 Oregon VPS，也没有占用正式 `7890/7891/7892`。当前 48 个跨地区候选对 ChatGPT/OpenAI API 延迟均返回 503，实际请求为 TLS EOF；因此没有宣称 AI 业务完成，也没有把未验证节点写成 AI 专用节点。证据在 `shyvpn-review-20261113/ai-openai-scan-48-20261114.json`。
+
+上游对照提交为 `5b2aaf0daf7fa1b126170877f64dd8d2e34c2746`；本地和上游 `CHANGELOG` 顶部一致，包含连接复用、连接参数调节和 1101 修复。本地协议文件只保留拆分 Worker 所需的导出适配，不整体覆盖上游。
+
 ## 2026-11-14 临时 Mihomo 核心验收
 
 用户明确禁止再次启动隔离 Sparkle 客户端；后续真实业务验收只启动 `E:\工具\Sparkle\resources\sidecar\mihomo.exe`，不修改正式 Sparkle 数据目录，也不占用正式 `7890/7891/7892`。临时 Mihomo 使用一次性 C 盘工作目录和独立端口，结束后删除核心、配置和临时目录。

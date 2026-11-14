@@ -114,19 +114,27 @@ function rebuildClash(nodes, env, requestHost, data) {
     byCarrier.get(item.carrier).push(item.name);
     byRegion.get(item.region).push(item.name);
   }
-  const group = (name, values, type = 'select') => `  - name: ${rebuildYaml(name)}\n    type: ${type}\n    url: ${TEST_URL}\n    expected-status: 204\n    timeout: 12000\n    proxies:\n${(values.length ? values : ['DIRECT']).map(value => `      - ${rebuildYaml(value)}`).join('\n')}`;
+  const group = (name, values, type = 'select', url = TEST_URL, expectedStatus = 204) => `  - name: ${rebuildYaml(name)}\n    type: ${type}\n    url: ${url}\n    expected-status: ${expectedStatus}\n    timeout: 12000${type === 'url-test' ? '\n    interval: 300\n    tolerance: 100' : ''}\n    proxies:\n${(values.length ? values : ['DIRECT']).map(value => `      - ${rebuildYaml(value)}`).join('\n')}`;
   const all = items.map(item => item.name);
   const preferredIPs = new Set(String(env.PREFERRED_ENTRY_IPS || '104.18.39.37,104.18.32.198').split(',').map(value => value.trim()));
   const preferred = items.filter(item => preferredIPs.has(item.rawIP)).map(item => item.name);
   const carrierChoices = ['移动', '电信', '联通', '多线', '其他'].filter(name => byCarrier.has(name)).map(name => `运营商 | ${name}`);
   const regionChoices = [...byRegion.keys()].map(name => `地区 | ${name}`);
   const addressChoices = [4, 6].filter(family => items.some(item => item.rawIP.includes(':') === (family === 6))).map(family => `地址 | IPv${family}`);
-  const mainChoices = [...new Set([...preferred, ...carrierChoices, ...regionChoices, ...addressChoices, ...all])];
-  const carrierGroups = ['移动', '电信', '联通', '多线', '其他'].map(name => group(`运营商 | ${name}`, byCarrier.get(name) || [])).join('\n');
-  const regionGroups = [...byRegion.keys()].map(name => group(`地区 | ${name}`, byRegion.get(name) || [])).join('\n');
+  const autoGroup = '⚡ 自动选择';
+  const aiGroup = '🤖 AI 代理';
+  const mainChoices = [...new Set([autoGroup, aiGroup, ...preferred, ...carrierChoices, ...regionChoices, ...addressChoices, ...all])];
+  const carrierGroups = ['移动', '电信', '联通', '多线', '其他'].map(name =>
+    group(`运营商 | ${name}`, byCarrier.get(name) || [], byCarrier.has(name) ? 'url-test' : 'select')).join('\n');
+  const regionGroups = [...byRegion.keys()].map(name => group(`地区 | ${name}`, byRegion.get(name) || [], 'url-test')).join('\n');
   const host = rebuildSafe(env.PROXY_HOST || env.HOST || requestHost);
-  const familyGroups = [4, 6].map(family => group(`地址 | IPv${family}`, items.filter(item => item.rawIP.includes(':') === (family === 6)).map(item => item.name))).join('\n');
-  return `mixed-port: 7890\nallow-lan: false\nmode: rule\nlog-level: warning\ncfw-latency-url: ${TEST_URL}\nproxies:\n${proxies || '  - {"name":"DIRECT","type":"direct"}'}\nproxy-groups:\n${group('🚀 节点选择', mainChoices)}\n${carrierGroups}\n${regionGroups}\n${familyGroups}\nrules:\n  - DOMAIN-SUFFIX,${host},DIRECT\n  - MATCH,🚀 节点选择\n# source_updated: ${rebuildSafe(data.generatedAt)}\n# node_count: ${items.length}\n`;
+  const familyGroups = [4, 6].map(family => {
+    const values = items.filter(item => item.rawIP.includes(':') === (family === 6)).map(item => item.name);
+    return group(`地址 | IPv${family}`, values, values.length ? 'url-test' : 'select');
+  }).join('\n');
+  const autoGroupYaml = group(autoGroup, all, 'url-test');
+  const aiGroupYaml = group(aiGroup, all, 'url-test', 'https://chatgpt.com/', 200);
+  return `mixed-port: 7890\nallow-lan: false\nmode: rule\nlog-level: warning\ncfw-latency-url: ${TEST_URL}\nproxies:\n${proxies || '  - {"name":"DIRECT","type":"direct"}'}\nproxy-groups:\n${group('🚀 节点选择', mainChoices)}\n${autoGroupYaml}\n${aiGroupYaml}\n${carrierGroups}\n${regionGroups}\n${familyGroups}\nrules:\n  - DOMAIN-SUFFIX,${host},DIRECT\n  - DOMAIN-SUFFIX,chatgpt.com,${aiGroup}\n  - DOMAIN-SUFFIX,chat.openai.com,${aiGroup}\n  - DOMAIN-SUFFIX,openai.com,${aiGroup}\n  - DOMAIN-SUFFIX,oaistatic.com,${aiGroup}\n  - DOMAIN-SUFFIX,oaiusercontent.com,${aiGroup}\n  - DOMAIN-SUFFIX,openaiusercontent.com,${aiGroup}\n  - DOMAIN-SUFFIX,statsigapi.net,${aiGroup}\n  - MATCH,🚀 节点选择\n# source_updated: ${rebuildSafe(data.generatedAt)}\n# node_count: ${items.length}\n`;
 }
 
 function rebuildVlessLinks(nodes, env, requestHost) {

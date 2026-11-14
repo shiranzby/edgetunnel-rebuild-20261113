@@ -39,6 +39,7 @@ test('homepage is the original full page with three account gates and no outer p
   assert.match(html, /id="modeToggleBtn"[\s\S]*?<\/button><a[^>]*id="shy-rankings"/);
   assert.doesNotMatch(html, /id="panel"/);
   assert.match(html, /name="username"[^>]*value=""/);
+  assert.match(html, /name="username"[^>]*placeholder="请输入管理员账号"/);
   assert.doesNotMatch(html, /name="username"[^>]*value="shiran"/);
   for (const secret of [env.ADMIN, env.KEY, env.UUID, env.SUB_TOKEN]) assert.ok(!html.includes(secret));
 });
