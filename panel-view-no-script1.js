@@ -7,7 +7,7 @@ const protectedTitles = [
 ];
 
 function loginForm() {
-  return `<form class="shy-login-form"><label>管理员账号<input name="username" autocomplete="username" value="admin" required></label>
+  return `<form class="shy-login-form"><label>管理员账号<input name="username" autocomplete="username" value="shiran" required></label>
 <label>管理员密码<input name="password" type="password" autocomplete="current-password" placeholder="请输入管理员密码" required></label>
 <button class="btn btn-primary" type="submit">登录并查看</button><p class="shy-login-status" role="status"></p></form>`;
 }

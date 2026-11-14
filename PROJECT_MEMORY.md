@@ -8,6 +8,10 @@
 
 测试脚本若将 `tempfile.mkdtemp(..., dir=F:)` 作为工作目录，可能在当前 Windows 环境卡住；一次性工作目录应放在 C 盘并在退出时校验删除。不要把这个环境问题误判成节点超时。
 
+## 2026-11-14 管理员凭据切换
+
+按用户明确要求，`shw.us.ci` 当前生产管理员账号已切换为 `shiran`；密码只保存在本机私密部署文件和 Cloudflare Secret，不写入仓库、文档、截图或回复。认证、会话、管理员接口和首页四个 Worker 已同步更新。中国移动物理 IPv4 验证新账号登录成功、会话保持、私有配置读取成功，退出后私有接口返回 401；旧 `admin` 账号已失效。
+
 ## ShyVPN EdgeTunnel 重建（2026-11-14）
 
 这是当前权威状态。原始仓库 `shiranzby/edgetunnel` 保留；重建仓库为 `F:/WorkSpace/Myproject/edgetunnel-rebuild-20261113/repo`。

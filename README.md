@@ -59,7 +59,7 @@ Worker 对公开 JSON 使用短缓存并保留内置快照。数据提交后不�
 必须设置：
 
 - `ADMIN`：管理员密码；
-- `ADMIN_USER`：管理员账号，默认值为 `admin`；
+- `ADMIN_USER`：管理员账号；当前生产值为 `shiran`，未设置时默认值为 `admin`；
 - `UUID`：VLESS UUID；
 - `KEY` 或 `SUB_TOKEN`：订阅访问密钥。
 
