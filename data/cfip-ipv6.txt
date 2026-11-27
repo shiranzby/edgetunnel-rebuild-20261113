@@ -1,29 +1,29 @@
-[2a06:98c1:3100::6812:29be]:443#cfhub 全国 ECH 232ms | cfhub 电信 ECH 232ms | cfhub 国内云厂商 ECH 199ms
-[2606:4700::6810:8eed]:443#cfhub 全国 ECH 601ms | cfhub 联通 ECH 601ms | cfhub 教育网 ECH 193ms
-[2a06:98c1:310d::6812:230f]:443#cfhub 全国 ECH 198ms | cfhub 国内云厂商 ECH 198ms
-[2606:4700:4407::6812:2230]:443#cfhub 全国 ECH 233ms | cfhub 电信 ECH 233ms
-[2606:4700:10::6814:1c4a]:443#cfhub 全国 ECH 601ms
-[2606:4700:440d::7b5:d9d1]:443#cfhub 电信 ECH 248ms
-[2a06:98c1:310e::3dd2:f6ea]:443#cfhub 电信 ECH 239ms
-[2606:4700:4409::26d0:b1aa]:443#cfhub 电信 ECH 247ms
-[2a06:98c1:310a::389d:4945]:443#cfhub 电信 ECH 233ms
-[2606:4700:3037::ac43:d17f]:443#cfhub 联通 ECH 598ms
-[2606:4700::6813:ad44]:443#cfhub 联通 ECH 589ms
-[2606:4700:3031::6815:799]:443#cfhub 联通 ECH 608ms
-[2a06:98c1:4f::91d5:7a6a]:443#cfhub 联通 ECH 596ms
-[2606:4700:f6::8959:b675]:443#cfhub 联通 ECH 604ms
-[2606:4700:83ba::9cc:b1c9]:443#cfhub 移动 ECH 358ms
-[2606:4700:83b6::33a4:6049]:443#cfhub 移动 ECH 361ms
-[2606:4700:83b4::93d3:cb3a]:443#cfhub 移动 ECH 355ms
+[2606:4700:4401::ac40:93d1]:443#cfhub 全国 ECH 290ms | cfhub 教育网 ECH 290ms
+[2a06:98c1:310b::ac40:9242]:443#cfhub 全国 ECH 257ms | cfhub 电信 ECH 257ms
+[2a06:98c1:3100::6812:29be]:443#cfhub 全国 ECH 258ms | cfhub 电信 ECH 258ms
+[2606:4700::6813:ae44]:443#cfhub 全国 ECH 698ms | cfhub 联通 ECH 698ms | cfhub 教育网 ECH 275ms
+[2606:4700:4409::26d0:b1aa]:443#cfhub 电信 ECH 261ms
+[2a06:98c1:310d::6812:282f]:443#cfhub 电信 ECH 254ms
+[2606:4700:440d::7b5:d9d1]:443#cfhub 电信 ECH 265ms
+[2a06:98c1:310e::3dd2:f6ea]:443#cfhub 电信 ECH 265ms
+[2606:4700:3035::6815:1748]:443#cfhub 联通 ECH 690ms
+[2a06:98c1:4f::a776:5b1c]:443#cfhub 联通 ECH 699ms
+[2606:4700:3037::ac43:8252]:443#cfhub 联通 ECH 685ms
+[2606:4700:3031::6815:799]:443#cfhub 联通 ECH 680ms
+[2606:4700:440e::62b5:dae0]:443#cfhub 联通 ECH 693ms
+[2606:4700:83b4::93d3:cb3a]:443#cfhub 移动 ECH 353ms
+[2606:4700:83b6::33a4:6049]:443#cfhub 移动 ECH 349ms
+[2606:4700:83b3::5db7:dbec]:443#cfhub 移动 ECH 350ms
+[2606:4700:83ba::9cc:b1c9]:443#cfhub 移动 ECH 357ms
+[2606:4700:83bb::b31c:8793]:443#cfhub 移动 ECH 349ms
 [2606:4700:83b4::b8b5:e953]:443#cfhub 移动 ECH 352ms
-[2606:4700:83b3::7c2c:b767]:443#cfhub 移动 ECH 366ms
-[2606:4700:83bb::b31c:8793]:443#cfhub 移动 ECH 361ms
-[2606:4700::6813:ae44]:443#cfhub 教育网 ECH 191ms
-[2606:4700:4404::a942:57c9]:443#cfhub 教育网 ECH 194ms
-[2606:4700:4407::22d3:ff1d]:443#cfhub 教育网 ECH 193ms
-[2606:4700:49::1b48:e337]:443#cfhub 教育网 ECH 194ms
-[2606:4700:20::ac43:465c]:443#cfhub 教育网 ECH 195ms
-[2606:4700:4403::4c3a:3060]:443#cfhub 国内云厂商 ECH 197ms
-[2606:4700:4403::d305:6907]:443#cfhub 国内云厂商 ECH 199ms
-[2a06:98c1:3109::ab64:aa6c]:443#cfhub 国内云厂商 ECH 198ms
-[2a06:98c1:310f::32c9:11b1]:443#cfhub 国内云厂商 ECH 200ms
+[2606:4700:440b::851d:a878]:443#cfhub 教育网 ECH 281ms
+[2606:4700:9766::6643:53de]:443#cfhub 教育网 ECH 246ms
+[2606:4700:10::6814:1c4a]:443#cfhub 教育网 ECH 294ms
+[2606:4700:9b00::131b:f581]:443#cfhub 教育网 ECH 249ms
+[2606:4700:4409::c544:6a02]:443#cfhub 国内云厂商 ECH 200ms
+[2606:4700:440d::d771:d237]:443#cfhub 国内云厂商 ECH 199ms
+[2a06:98c1:310d::6812:230f]:443#cfhub 国内云厂商 ECH 200ms
+[2a06:98c1:3109::6d9d:c102]:443#cfhub 国内云厂商 ECH 200ms
+[2a06:98c1:3109::1b21:d3a4]:443#cfhub 国内云厂商 ECH 198ms
+[2a06:98c1:3105::9a26:5ca1]:443#cfhub 国内云厂商 ECH 199ms
